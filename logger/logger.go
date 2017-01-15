@@ -15,14 +15,15 @@ import (
 )
 
 const (
-	stdOutLogging = "BM_STDOUT_LOGGING"
+	stdOutLogging  = "BM_STDOUT_LOGGING"
+	logLevelEnvVar = "BM_LOG_LEVEL"
 )
 
 //New logger
-func New(logDirectory string, logFile string, loggerName string) *gosteno.Logger {
+func New(logDirectory string, logFile string, loggerName string, logLevel string) *gosteno.Logger {
 	loggingConfig := &gosteno.Config{
 		Sinks:		 make([]gosteno.Sink, 1),
-		Level:     gosteno.LOG_DEBUG,
+		Level:     computeLevel(logLevel),
 		Codec:     gosteno.NewJsonCodec(),
 		EnableLOC: true,
 	}
@@ -75,4 +76,15 @@ func getAbsolutePath(logDirectory string) string {
 	}
 
 	return absolutelogDirectory
+}
+
+func computeLevel(name string) gosteno.LogLevel {
+	if envValue := os.Getenv(logLevelEnvVar); envValue != "" {
+		name = envValue
+	}
+	ll, err := gosteno.GetLogLevel(name)
+	if err != nil {
+		return gosteno.LOG_INFO
+	}
+	return ll
 }

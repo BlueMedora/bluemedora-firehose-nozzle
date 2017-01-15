@@ -84,7 +84,7 @@ The nozzle can also be configured by setting a set of environment variables. The
 | PORT | WebServerPort |
 | BM_WEBSERVER_USE_SSL | WebServerUseSSL |
 | BM_STDOUT_LOGGING | Does not correspond to a config field, but signals if logging should save to files or straight to stdout. |
-
+| BM_LOG_LEVEL | Does not correspond to a config field, but allows you to configure the log level for the nozzle. See [gosteno](https://github.com/cloudfoundry/gosteno#level) for possible values. |
 
 ## SSL Certificates
 
