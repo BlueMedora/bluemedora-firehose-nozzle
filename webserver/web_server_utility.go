@@ -64,7 +64,7 @@ func addMetric(envelope *events.Envelope, valueMetricMap map[string]float64, cou
 		counterMetricMap[counterEvent.GetName()] = float64(counterEvent.GetTotal())
 		logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
     } else {
-		logger.Errorf("Unkown event type %s", envelope.GetEventType())
+		logger.Warnf("Unkown event type %s", envelope.GetEventType())
 	}
 }
 
