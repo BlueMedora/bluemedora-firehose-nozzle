@@ -40,7 +40,7 @@ type NozzleConfiguration struct {
 	IdleTimeoutSeconds         uint32
 	MetricCacheDurationSeconds uint32
 	WebServerPort              uint32
-	WebServerUseSSL			   bool
+	WebServerUseSSL            bool
 }
 
 //New NozzleConfiguration

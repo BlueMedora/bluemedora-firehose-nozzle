@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type Client struct {
@@ -57,7 +57,7 @@ func (c *Client) GetAuthTokenWithExpiresIn(username, password string, insecureSk
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", -1,  fmt.Errorf("Received a status code %v", resp.Status)
+		return "", -1, fmt.Errorf("Received a status code %v", resp.Status)
 	}
 
 	jsonData := make(map[string]interface{})

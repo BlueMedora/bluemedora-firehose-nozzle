@@ -4,9 +4,9 @@
 package bluemedorafirehosenozzle
 
 import (
-    "fmt"
-    
-    "github.com/cloudfoundry/gosteno"
+	"fmt"
+
+	"github.com/cloudfoundry/gosteno"
 )
 
 //BMDebugPrinter prints consumer messages to log

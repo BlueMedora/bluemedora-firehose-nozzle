@@ -4,11 +4,11 @@
 package webserver
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
-	"encoding/json"
 
 	"github.com/BlueMedora/bluemedora-firehose-nozzle/nozzleconfiguration"
 	"github.com/BlueMedora/bluemedora-firehose-nozzle/webtoken"
@@ -18,11 +18,11 @@ import (
 
 //Webserver Constants
 const (
-	DefaultCertLocation 	= "./certs/cert.pem"
-	DefaultKeyLocation  	= "./certs/key.pem"
-	headerUsernameKey   	= "username"
-	headerPasswordKey   	= "password"
-	headerTokenKey      	= "token"
+	DefaultCertLocation = "./certs/cert.pem"
+	DefaultKeyLocation  = "./certs/key.pem"
+	headerUsernameKey   = "username"
+	headerPasswordKey   = "password"
+	headerTokenKey      = "token"
 )
 
 //WebServer REST endpoint for sending data
@@ -31,8 +31,8 @@ type WebServer struct {
 	mutext sync.Mutex
 	config *nozzleconfiguration.NozzleConfiguration
 	tokens map[string]*webtoken.Token //Maps token string to token object
-	
-	cache  map[string]map[string]Resource
+
+	cache map[string]map[string]Resource
 }
 
 //New creates a new WebServer
@@ -41,7 +41,7 @@ func New(config *nozzleconfiguration.NozzleConfiguration, logger *gosteno.Logger
 		logger: logger,
 		config: config,
 		tokens: make(map[string]*webtoken.Token),
-		cache: 	make(map[string]map[string]Resource),
+		cache:  make(map[string]map[string]Resource),
 	}
 
 	webserver.logger.Info("Registering handlers")
@@ -82,9 +82,9 @@ func (webserver *WebServer) Start(keyLocation string, certLocation string) <-cha
 	go func() {
 		defer close(errors)
 		if webserver.config.WebServerUseSSL {
-		errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", webserver.config.WebServerPort), getAbsolutePath(certLocation, webserver.logger), getAbsolutePath(keyLocation, webserver.logger), nil)
+			errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", webserver.config.WebServerPort), getAbsolutePath(certLocation, webserver.logger), getAbsolutePath(keyLocation, webserver.logger), nil)
 		} else {
-			errors <- http.ListenAndServe(fmt.Sprintf(":%v",webserver.config.WebServerPort), nil)
+			errors <- http.ListenAndServe(fmt.Sprintf(":%v", webserver.config.WebServerPort), nil)
 		}
 	}()
 	return errors
@@ -139,7 +139,7 @@ func (webserver *WebServer) tokenHandler(w http.ResponseWriter, r *http.Request)
 func (webserver *WebServer) metronAgentsHandler(w http.ResponseWriter, r *http.Request) {
 	webserver.logger.Info("Received /metron_agents request")
 	webserver.processResourceRequest(metronAgentOrigin, w, r)
-	
+
 }
 
 func (webserver *WebServer) syslogDrainBindersHandler(w http.ResponseWriter, r *http.Request) {
@@ -263,35 +263,35 @@ func (webserver *WebServer) gorouterHandler(w http.ResponseWriter, r *http.Reque
 func (webserver *WebServer) CacheEnvelope(envelope *events.Envelope) {
 	webserver.mutext.Lock()
 	defer webserver.mutext.Unlock()
-	
+
 	key := createEnvelopeKey(envelope)
 	webserver.logger.Debugf("Caching envelope origin %s with key %s", envelope.GetOrigin(), key)
-	
+
 	//Find origin map
 	var resourceCache map[string]Resource
-	
+
 	if value, ok := webserver.cache[envelope.GetOrigin()]; ok {
 		resourceCache = value
 	} else {
 		resourceCache = make(map[string]Resource)
 		webserver.cache[envelope.GetOrigin()] = resourceCache
 	}
-	
+
 	//Check to see if resource exists in origin map
 	var resource Resource
 	if value, ok := resourceCache[key]; ok {
 		resource = value
 	} else {
-		resource = Resource {
-			Deployment:		envelope.GetDeployment(),
-			Job:			envelope.GetJob(),
-			Index:			envelope.GetIndex(),
-			IP:				envelope.GetIp(),
-			ValueMetrics:	make(map[string]float64),
-			CounterMetrics:	make(map[string]float64),
+		resource = Resource{
+			Deployment:     envelope.GetDeployment(),
+			Job:            envelope.GetJob(),
+			Index:          envelope.GetIndex(),
+			IP:             envelope.GetIp(),
+			ValueMetrics:   make(map[string]float64),
+			CounterMetrics: make(map[string]float64),
 		}
 	}
-	
+
 	addMetric(envelope, resource.ValueMetrics, resource.CounterMetrics, webserver.logger)
 	resourceCache[key] = resource
 }
@@ -301,19 +301,19 @@ func (webserver *WebServer) ClearCache() {
 	webserver.logger.Info("Flushing Cache")
 	webserver.mutext.Lock()
 	defer webserver.mutext.Unlock()
-	
+
 	webserver.cache = make(map[string]map[string]Resource)
 }
 
 func (webserver *WebServer) processResourceRequest(originType string, w http.ResponseWriter, r *http.Request) {
 	webserver.mutext.Lock()
 	defer webserver.mutext.Unlock()
-	
+
 	if r.Method == "GET" {
 		tokenString := r.Header.Get(headerTokenKey)
-		
+
 		token := webserver.tokens[tokenString]
-		
+
 		if token == nil || !token.IsTokenValid() {
 			webserver.logger.Debugf("Invalid token %s supplied", tokenString)
 			w.WriteHeader(http.StatusUnauthorized)
@@ -322,7 +322,7 @@ func (webserver *WebServer) processResourceRequest(originType string, w http.Res
 			webserver.logger.Debugf("Valid token %s supplied", tokenString)
 			token.UseToken()
 			webserver.sendOriginBytes(originType, w)
-		}		
+		}
 	} else {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		io.WriteString(w, fmt.Sprintf("Unsupported http method %s", r.Method))
@@ -331,9 +331,9 @@ func (webserver *WebServer) processResourceRequest(originType string, w http.Res
 
 func (webserver *WebServer) sendOriginBytes(originType string, w http.ResponseWriter) {
 	resourceMap := webserver.cache[originType]
-	
+
 	var messageBytes []byte
-	
+
 	if resourceMap == nil {
 		w.WriteHeader(http.StatusNoContent)
 		messageBytes = []byte("{}")
@@ -342,9 +342,9 @@ func (webserver *WebServer) sendOriginBytes(originType string, w http.ResponseWr
 		values := getValues(resourceMap)
 		messageBytes, _ = json.Marshal(values)
 	}
-	
+
 	_, err := w.Write(messageBytes)
-	
+
 	if err != nil {
 		webserver.logger.Errorf("Error while answering end point call for origin %s: %s", originType, err.Error())
 	}
