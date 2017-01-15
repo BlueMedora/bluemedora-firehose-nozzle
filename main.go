@@ -18,6 +18,7 @@ const (
 	defaultLogDirectory = "./logs"
 	nozzleLogFile       = "bm_nozzle.log"
 	nozzleLogName       = "bm_firehose_nozzle"
+	nozzleLogLevel      = "info"
 
 	webserverLogFile = "bm_server.log"
 	webserverLogName = "bm_server"
@@ -26,6 +27,7 @@ const (
 var (
 	//Mode to run nozzle in. Webserver mode is for debugging purposes only
 	runMode = flag.String("mode", "normal", "Mode to run nozzle `normal` or `webserver`")
+	logLevel = flag.String("log-level", nozzleLogLevel, "Set log level to control verbosity - defaults to info")
 )
 
 func main() {
@@ -41,7 +43,7 @@ func main() {
 func normalSetup() {
 	logger.CreateLogDirectory(defaultLogDirectory)
     
-	logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName)
+	logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, *logLevel)
 	logger.Debug("working log")
 
 	//Read in config
@@ -62,7 +64,7 @@ func normalSetup() {
 }
 
 func standUpWebServer() {
-	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName)
+	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
     
     //Read in config
 	config, err := nozzleconfiguration.New(defaultConfigLocation, logger)
@@ -82,7 +84,7 @@ func standUpWebServer() {
 }
 
 func createWebServer(config *nozzleconfiguration.NozzleConfiguration) *webserver.WebServer {
-	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName)
+	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
 	return webserver.New(config, logger)
 }
 

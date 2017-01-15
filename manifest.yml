@@ -17,3 +17,4 @@ applications:
     BM_METRIC_CACHE_DURATION_SECONDS: 90
     BM_WEBSERVER_USE_SSL: false
     BM_STDOUT_LOGGING: true
+    BM_LOG_LEVEL: info

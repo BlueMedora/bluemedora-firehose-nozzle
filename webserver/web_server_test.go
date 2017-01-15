@@ -22,8 +22,10 @@ const (
 	defaultLogDirectory = "../logs"
 	webserverLogFile    = "bm_server.log"
 	webserverLogName    = "bm_server"
-	
-	testCertLocation = "../certs/cert.pem"
+	webserverLogLevel   = "debug"
+
+
+testCertLocation = "../certs/cert.pem"
 	testKeyLocation  = "../certs/key.pem"
 )
 
@@ -558,7 +560,7 @@ func noCachedDataTest(t *testing.T, client *http.Client, token string, port uint
 func createWebServer(t *testing.T) (*WebServer, *nozzleconfiguration.NozzleConfiguration) {
 	t.Log("Creating webserver...")
 	logger.CreateLogDirectory(defaultLogDirectory)
-	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName)
+	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, webserverLogLevel)
 
 	config, err := nozzleconfiguration.New(defaultConfigLocation, logger)
 	if err != nil {

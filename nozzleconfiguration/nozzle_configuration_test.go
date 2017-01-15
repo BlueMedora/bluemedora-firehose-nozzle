@@ -19,7 +19,8 @@ const (
     defaultLogDirectory = "../logs"
 	nozzleLogFile       = "bm_nozzle.log"
 	nozzleLogName       = "bm_firehose_nozzle"
-    
+    nozzleLogLevel      = "debug"
+
     configFile = "../config/bluemedora-firehose-nozzle.json"
     tempConfigFile = "../config/bluemedora-firehose-nozzle.json.real"
     
@@ -58,7 +59,7 @@ func TestConfigParsing(t *testing.T) {
     
     t.Log("Creating configuration...")
     logger.CreateLogDirectory(defaultLogDirectory)
-    logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName)
+    logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, nozzleLogLevel)
     
     //Create new configuration
     var config *NozzleConfiguration
@@ -139,7 +140,7 @@ func TestBadConfigFile(t *testing.T) {
     }
     
     logger.CreateLogDirectory(defaultLogDirectory)
-    logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName)
+    logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, nozzleLogLevel)
     
     //Create new configuration
     t.Log("Checking loading of bad config file... (expecting error)")
@@ -162,7 +163,7 @@ func TestBadConfigFile(t *testing.T) {
 func TestNoConfigFile(t *testing.T) {
     t.Log("Creating configuration...")
     logger.CreateLogDirectory(defaultLogDirectory)
-    logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName)
+    logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, nozzleLogLevel)
     
     //Create new configuration
     t.Log("Checking loading of non-existent file... (expecting error)")
@@ -187,7 +188,7 @@ func TestEnvironmentVariables(t *testing.T) {
     
     t.Log("Creating configuration...")
     logger.CreateLogDirectory(defaultLogDirectory)
-    logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName)
+    logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, nozzleLogLevel)
 
     os.Setenv(uaaURLEnv, testEnvUAAURL)
     os.Setenv(uaaUsernameEnv, testEnvUsername)
