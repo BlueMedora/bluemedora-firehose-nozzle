@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	host       = "127.0.0.1"
-	validFor   = time.Duration(365*24*time.Hour)
-	rsaBits    = 2048
+	host     = "127.0.0.1"
+	validFor = time.Duration(365 * 24 * time.Hour)
+	rsaBits  = 2048
 )
 
 func publicKey(priv interface{}) interface{} {
@@ -58,12 +58,12 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 
 //GenerateCertFiles creates self signed local certs for testing
 func GenerateCertFiles() {
-    priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
+	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
 	if err != nil {
 		log.Fatalf("failed to generate private key: %s", err)
 	}
 
-    notBefore := time.Now()
+	notBefore := time.Now()
 	notAfter := notBefore.Add(validFor)
 
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -94,8 +94,8 @@ func GenerateCertFiles() {
 		}
 	}
 
-    template.IsCA = true
-    template.KeyUsage |= x509.KeyUsageCertSign
+	template.IsCA = true
+	template.KeyUsage |= x509.KeyUsageCertSign
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
 	if err != nil {

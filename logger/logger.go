@@ -3,7 +3,6 @@
 
 package logger
 
-
 import (
 	"fmt"
 	"log"
@@ -22,12 +21,11 @@ const (
 //New logger
 func New(logDirectory string, logFile string, loggerName string, logLevel string) *gosteno.Logger {
 	loggingConfig := &gosteno.Config{
-		Sinks:		 make([]gosteno.Sink, 1),
+		Sinks:     make([]gosteno.Sink, 1),
 		Level:     computeLevel(logLevel),
 		Codec:     gosteno.NewJsonCodec(),
 		EnableLOC: true,
 	}
-
 
 	//todo check value of env var
 	if envValue := os.Getenv(stdOutLogging); envValue != "" {
@@ -37,7 +35,7 @@ func New(logDirectory string, logFile string, loggerName string, logLevel string
 			log.Fatalf("Failed to read in environment variable %s due to %v", stdOutLogging, err)
 		}
 
-		if (value) {
+		if value {
 			log.Print("Logging to stdout")
 			loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
 		} else {
@@ -67,11 +65,11 @@ func CreateLogDirectory(logDirectory string) {
 }
 
 func getAbsolutePath(logDirectory string) string {
-    log.Print("Finding absolute path to log directory")
+	log.Print("Finding absolute path to log directory")
 	absolutelogDirectory, err := filepath.Abs(logDirectory)
 
 	if err != nil {
-        log.Printf("Error getting absolute path to log directory using relative path due to %v", err)
+		log.Printf("Error getting absolute path to log directory using relative path due to %v", err)
 		return logDirectory
 	}
 
