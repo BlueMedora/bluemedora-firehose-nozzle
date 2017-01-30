@@ -57,7 +57,7 @@ func addMetric(envelope *events.Envelope, valueMetricMap map[string]float64, cou
 		valueMetric := envelope.GetValueMetric()
 
 		valueMetricMap[valueMetric.GetName()] = valueMetric.GetValue()
-		logger.Debugf("Adding Counter Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
+		logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
 	} else if envelope.GetEventType() == events.Envelope_CounterEvent {
 		counterEvent := envelope.GetCounterEvent()
 
