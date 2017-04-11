@@ -53,18 +53,31 @@ func createEnvelopeKey(envelope *events.Envelope) string {
 }
 
 func addMetric(envelope *events.Envelope, valueMetricMap map[string]float64, counterMetricMap map[string]float64, logger *gosteno.Logger) {
-	if envelope.GetEventType() == events.Envelope_ValueMetric {
+	switch envelope.GetEventType() {
+	case events.Envelope_ValueMetric:
 		valueMetric := envelope.GetValueMetric()
 
 		valueMetricMap[valueMetric.GetName()] = valueMetric.GetValue()
 		logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
-	} else if envelope.GetEventType() == events.Envelope_CounterEvent {
+	case events.Envelope_CounterEvent:
 		counterEvent := envelope.GetCounterEvent()
 
 		counterMetricMap[counterEvent.GetName()] = float64(counterEvent.GetTotal())
 		logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
-	} else {
-		logger.Warnf("Unkown event type %s", envelope.GetEventType())
+	case events.Envelope_ContainerMetric:
+		// ignored message type
+	case events.Envelope_LogMessage:
+		// ignored message type
+	case events.Envelope_HttpStartStop:
+		// ignored message type
+	case events.Envelope_Error:
+		// ignored message type
+	case events.Envelope_HttpStart:
+		// ignored message type
+	case events.Envelope_HttpStop:
+		// ignored message type
+	default:
+		logger.Warnf("Unknown event type %s", envelope.GetEventType())
 	}
 }
 
