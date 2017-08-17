@@ -37,7 +37,7 @@ func NewJsonPrettifier(flag int) *JsonPrettifier {
 		"{{encodeMessage .Message}}",
 	}
 
-	for i := range fields {
+	for i, _ := range fields {
 		// the shift count must be an unsigned integer
 		if (flag & (1 << uint(i))) != 0 {
 			fields[i] = ""

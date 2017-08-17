@@ -120,7 +120,7 @@ func (nozzle *BlueMedoraFirehoseNozzle) handleError(err error) {
 	case *websocket.CloseError:
 		switch closeError.Code {
 		case websocket.CloseNormalClosure:
-			nozzle.logger.Info("Connection closed normally")
+			nozzle.logger.Infof("Connection closed normally: %s", err.Error())
 		case websocket.ClosePolicyViolation:
 			nozzle.logger.Errorf("Error while reading from firehose: %s", err.Error())
 			nozzle.logger.Errorf("Disconnect due to nozzle not keeping up. Scale nozzle to prevent this problem.")

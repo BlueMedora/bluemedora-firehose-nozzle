@@ -1,0 +1,37 @@
+memo = "75514e417ce28c32170628f12815264e450b488e331d839041bdd50a22d76f3f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/cloudfoundry-incubator/uaago"
+  packages = ["."]
+  revision = "f020e05c9126e294b1fbfd89743adea3f7d6e098"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/cloudfoundry/gosteno"
+  packages = [".","syslog"]
+  revision = "0c8581caea35ac903728230e447792e2365dcc34"
+
+[[projects]]
+  name = "github.com/cloudfoundry/noaa"
+  packages = [".","consumer","consumer/internal","errors"]
+  revision = "a1d4a94e2be6711111893c59538976d07ef7ea98"
+  version = "v2.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/cloudfoundry/sonde-go"
+  packages = ["events"]
+  revision = "5f5bca3bcb61dbf9371b8db82497c6396cc0ea9b"
+
+[[projects]]
+  name = "github.com/gogo/protobuf"
+  packages = ["gogoproto","proto","protoc-gen-gogo/descriptor"]
+  revision = "100ba4e885062801d56799d78530b73b178a78f3"
+  version = "v0.4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "a69d9f6de432e2c6b296a947d8a5ee88f68522cf"

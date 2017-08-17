@@ -41,7 +41,7 @@ func Init(c *Config) {
 
 	setConfig(*c)
 
-	for name := range loggers {
+	for name, _ := range loggers {
 		loggers[name] = nil
 	}
 }
