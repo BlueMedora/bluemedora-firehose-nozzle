@@ -94,6 +94,18 @@ The Blue Medora Nozzle uses SSL for it's REST web server if the `WebServerUseSSL
 openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout certs/key.pem -out certs/cert.pem
 ```
 
+## Project setup
+
+To get the project:
+
+`go get -u github.com/BlueMedoraPublic/bluemedora-firehose-nozzle`
+
+Then init [dep](https://github.com/golang/dep)
+
+`dep init`
+
+`dep ensure`
+
 ## Running
 
 To run the Blue Medora nozzle simple execute:
