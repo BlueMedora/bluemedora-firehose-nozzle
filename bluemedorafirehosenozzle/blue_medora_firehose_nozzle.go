@@ -13,6 +13,7 @@ import (
 	"github.com/cloudfoundry-incubator/uaago"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/noaa/consumer"
+	noaaerrors "github.com/cloudfoundry/noaa/errors"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 )
@@ -116,11 +117,15 @@ func (nozzle *BlueMedoraFirehoseNozzle) flushMetricCaches() {
 }
 
 func (nozzle *BlueMedoraFirehoseNozzle) handleError(err error) {
+	if retryErr, ok := err.(noaaerrors.RetryError); ok {
+		err = retryErr.Err
+	}
+
 	switch closeError := err.(type) {
 	case *websocket.CloseError:
 		switch closeError.Code {
 		case websocket.CloseNormalClosure:
-			nozzle.logger.Info("Connection closed normally")
+			nozzle.logger.Infof("Connection closed normally: %s", err.Error())
 		case websocket.ClosePolicyViolation:
 			nozzle.logger.Errorf("Error while reading from firehose: %s", err.Error())
 			nozzle.logger.Errorf("Disconnect due to nozzle not keeping up. Scale nozzle to prevent this problem.")

@@ -33,3 +33,9 @@ bluemedora-firehose-nozzle
 
 #Tile
 tile.yml
+
+#dep folders
+vendor
+
+#executables
+nozzle

@@ -72,10 +72,6 @@ func addMetric(envelope *events.Envelope, valueMetricMap map[string]float64, cou
 		// ignored message type
 	case events.Envelope_Error:
 		// ignored message type
-	case events.Envelope_HttpStart:
-		// ignored message type
-	case events.Envelope_HttpStop:
-		// ignored message type
 	default:
 		logger.Warnf("Unknown event type %s", envelope.GetEventType())
 	}
