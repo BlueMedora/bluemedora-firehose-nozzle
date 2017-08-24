@@ -1,6 +1,7 @@
 package ttlcache
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/cloudfoundry/gosteno"
@@ -98,4 +99,32 @@ func (r *Resource) getMetric(metricMap map[string]*Metric, metricName string) *M
 	}
 
 	return metric
+}
+
+func (r *Resource) MarshallJSON() ([]byte, error) {
+	valueMetrics, counterMetrics := convertMap(r.valueMetrics), convertMap(r.counterMetrics)
+
+	return json.Marshal(&struct {
+		Deployment     string
+		Job            string
+		Index          string
+		IP             string
+		ValueMetrics   map[string]float64
+		CounterMetrics map[string]float64
+	}{
+		Deployment:     r.deployment,
+		Job:            r.job,
+		Index:          r.index,
+		IP:             r.ip,
+		ValueMetrics:   valueMetrics,
+		CounterMetrics: counterMetrics,
+	})
+}
+
+func convertMap(inputMap map[string]*Metric) map[string]float64 {
+	outputMap := make(map[string]float64)
+	for key, metric := range inputMap {
+		outputMap[key] = metric.getData()
+	}
+	return outputMap
 }

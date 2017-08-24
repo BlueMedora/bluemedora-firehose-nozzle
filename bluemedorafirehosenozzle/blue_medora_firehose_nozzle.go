@@ -113,10 +113,6 @@ func (nozzle *BlueMedoraFirehoseNozzle) cacheEnvelope(envelope *events.Envelope)
 	nozzle.server.CacheEnvelope(envelope)
 }
 
-func (nozzle *BlueMedoraFirehoseNozzle) flushMetricCaches() {
-	nozzle.server.ClearCache()
-}
-
 func (nozzle *BlueMedoraFirehoseNozzle) handleError(err error) {
 	if retryErr, ok := err.(noaaerrors.RetryError); ok {
 		err = retryErr.Err
@@ -138,5 +134,4 @@ func (nozzle *BlueMedoraFirehoseNozzle) handleError(err error) {
 	}
 
 	nozzle.consumer.Close()
-	nozzle.flushMetricCaches()
 }
