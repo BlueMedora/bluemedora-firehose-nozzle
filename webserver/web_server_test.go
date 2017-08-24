@@ -542,7 +542,6 @@ func resourcePutEndPointTest(t *testing.T, client *http.Client, port uint32) {
 }
 
 func noCachedDataTest(t *testing.T, client *http.Client, token string, port uint32, server *WebServer) {
-	server.ClearCache()
 	request := createResourceRequest(t, token, port, "gorouters")
 
 	t.Logf("Check if server response to put resource endpoint request... (expecting status code: %v)", http.StatusNoContent)

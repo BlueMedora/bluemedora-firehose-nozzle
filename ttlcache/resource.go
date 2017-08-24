@@ -2,22 +2,35 @@ package ttlcache
 
 import (
 	"sync"
-	
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
 //Resource represents cloud controller data
 type Resource struct {
-	mutext 		   sync.RWMutex
-	Deployment     string
-	Job            string
-	Index          string
-	IP             string
+	mutext         sync.RWMutex
+	deployment     string
+	job            string
+	index          string
+	ip             string
 	valueMetrics   map[string]*Metric
 	counterMetrics map[string]*Metric
 }
 
+//CreateResource Creates a new resource
+func CreateResource(deployment, job, index, ip string) *Resource {
+	return &Resource{
+		deployment:     deployment,
+		job:            job,
+		index:          index,
+		ip:             ip,
+		valueMetrics:   make(map[string]*Metric),
+		counterMetrics: make(map[string]*Metric),
+	}
+}
+
+//AddMetric adds a metric to a resource
 func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) {
 	var metric *Metric
 	switch envelope.GetEventType() {

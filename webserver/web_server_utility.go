@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/BlueMedora/bluemedora-firehose-nozzle/ttlcache"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -77,8 +78,8 @@ func addMetric(envelope *events.Envelope, valueMetricMap map[string]float64, cou
 	}
 }
 
-func getValues(resourceMap map[string]Resource) []Resource {
-	resources := make([]Resource, 0, len(resourceMap))
+func getValues(resourceMap map[string]*ttlcache.Resource) []*ttlcache.Resource {
+	resources := make([]*ttlcache.Resource, 0, len(resourceMap))
 
 	for _, resource := range resourceMap {
 		resources = append(resources, resource)

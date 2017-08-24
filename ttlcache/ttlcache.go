@@ -1,14 +1,16 @@
 package ttlcache
 
 import (
-	"time"
 	"sync"
+	"time"
 )
 
+const cacheFlushSecond = 10
+
 type TTLCache struct {
-	mutext sync.RWMutex
-	TTL time.Duration
-	resources map[string]*Resource
+	mutext  sync.RWMutex
+	TTL     time.Duration
+	origins map[string]map[string]*Resource
 }
 
 var instance *TTLCache
@@ -23,33 +25,59 @@ func GetInstance() *TTLCache {
 	return instance
 }
 
-func (cache *TTLCache) Set(key string, resource *Resource) {
+func (cache *TTLCache) SetResource(originKey, key string, resource *Resource) {
 	cache.mutext.Lock()
 	defer cache.mutext.Unlock()
-	cache.resources[key] = resource
+
+	var origin map[string]*Resource
+	if value, ok := cache.origins[originKey]; ok {
+		origin = value
+	} else {
+		origin = make(map[string]*Resource)
+		cache.origins[originKey] = origin
+	}
+
+	origin[key] = resource
 }
 
-func (cache *TTLCache) Get(key string) (resource *Resource, found bool) {
+func (cache *TTLCache) GetResource(originKey, key string) (resource *Resource, found bool) {
 	cache.mutext.RLock()
 	defer cache.mutext.RUnlock()
-	resource, found = cache.resources[key]
+
+	if origin, found := cache.origins[originKey]; found {
+		resource, found = origin[key]
+	}
 	return resource, found
+}
+
+func (cache *TTLCache) GetOrigin(originKey string) (origin map[string]*Resource, found bool) {
+	cache.mutext.RLock()
+	defer cache.mutext.RUnlock()
+
+	origin, found = cache.origins[originKey]
+	return origin, found
 }
 
 func (cache *TTLCache) cleanup() {
 	cache.mutext.Lock()
 	defer cache.mutext.Unlock()
 
-	for key, resource := range cache.resources {
-		resource.cleanup()
-		if resource.isEmpty() {
-			delete(cache.resources, key)
+	for originKey, origin := range cache.origins {
+		for key, resource := range origin {
+			resource.cleanup()
+			if resource.isEmpty() {
+				delete(origin, key)
+			}
+		}
+
+		if len(origin) == 0 {
+			delete(cache.origins, originKey)
 		}
 	}
 }
 
 func (cache *TTLCache) startCleanupTimer() {
-	duration := cache.TTL
+	duration := time.Duration(cacheFlushSecond) * time.Second
 	if duration < time.Second {
 		duration = time.Second
 	}
@@ -57,16 +85,16 @@ func (cache *TTLCache) startCleanupTimer() {
 	go (func() {
 		for {
 			select {
-				case <- ticker:
-					cache.cleanup()
+			case <-ticker:
+				cache.cleanup()
 			}
 		}
-	}) ()
+	})()
 }
 
 func createTTLCache() *TTLCache {
-	cache := &TTLCache {
-		resources: make(map[string]*Resource),
+	cache := &TTLCache{
+		origins: make(map[string]map[string]*Resource),
 	}
 
 	cache.startCleanupTimer()

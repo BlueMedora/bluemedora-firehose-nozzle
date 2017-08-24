@@ -8,7 +8,7 @@ import (
 //Metric represents a single dropsonde metric
 type Metric struct {
 	sync.RWMutex
-	data float64
+	data    float64
 	expires *time.Time
 }
 
@@ -31,8 +31,7 @@ func (m *Metric) expired() bool {
 	defer m.RUnlock()
 	if m.expires == nil {
 		return true
-	} 
-	
+	}
+
 	return m.expires.Before(time.Now())
 }
-
