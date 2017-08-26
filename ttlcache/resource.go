@@ -93,11 +93,12 @@ func (r *Resource) cleanup() {
 
 func (r *Resource) getMetric(metricMap map[string]*Metric, metricName string) *Metric {
 	var metric *Metric
-	if metric, ok := metricMap[metricName]; !ok {
-		metric = &Metric{}
-		metricMap[metricName] = metric
+	if value, ok := metricMap[metricName]; ok {
+		return value
 	}
 
+	metric = &Metric{}
+	metricMap[metricName] = metric
 	return metric
 }
 

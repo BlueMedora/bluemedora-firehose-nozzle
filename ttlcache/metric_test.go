@@ -32,7 +32,7 @@ func TestGetData(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	metric := &Metric{data: 24}
+	metric := &Metric{}
 	metric.update(35, time.Second)
 	if metric.expired() {
 		t.Error("Expected item to not be expired after update")
