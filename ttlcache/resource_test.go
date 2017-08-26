@@ -41,8 +41,8 @@ func TestCreateResource(t *testing.T) {
 func TestGetMetric(t *testing.T) {
 
 	//Test not passing
-	dummy, deployment, job, index, ip := "dummy", "deployment", "job", "index", "ip"
-	resource := CreateResource(deployment, job, index, ip)
+	dummy := "dummy"
+	resource := createTestResource()
 
 	//Create new metric
 	metric := resource.getMetric(resource.valueMetrics, dummy)
@@ -54,6 +54,43 @@ func TestGetMetric(t *testing.T) {
 	newMetric := resource.getMetric(resource.valueMetrics, dummy)
 	if newMetric != metric {
 		t.Errorf("Expecting %v, got %v", metric, newMetric)
+	}
+}
+
+func TestIsEmpty(t *testing.T) {
+	resource := createTestResource()
+
+	if !resource.isEmpty() {
+		t.Error("Resource was not empty")
+	}
+
+	resource.valueMetrics["test"] = &Metric{}
+
+	if resource.isEmpty() {
+		t.Error("Resource was empty")
+	}
+}
+
+func TestCleanup(t *testing.T) {
+	expiration := time.Now().Add(time.Second)
+	resource := createTestResource()
+
+	resource.valueMetrics["test"] = &Metric{expires: &expiration}
+	resource.counterMetrics["test"] = &Metric{expires: &expiration}
+
+	resource.cleanup()
+
+	if resource.isEmpty() {
+		t.Error("Resource was empty after adding metrics")
+	}
+
+	//Sleep to allow expiration
+	time.Sleep(2 * time.Second)
+
+	resource.cleanup()
+	
+	if !resource.isEmpty() {
+		t.Error("Resource was not empty after metrics expired")
 	}
 }
 
@@ -92,7 +129,7 @@ func TestAddMetric(t *testing.T) {
 		},
 	}
 
-	resource := CreateResource(deployment, job, index, ip)
+	resource := createTestResource()
 
 	//Test adding value metric
 	resource.AddMetric(metricEnvelope, logger)
@@ -123,6 +160,50 @@ func TestAddMetric(t *testing.T) {
 	delete(resource.valueMetrics, counterName)
 }
 
+func TestConvertMap(t *testing.T) {
+	testCases := []struct {
+		testName string
+		input	 map[string]*Metric
+		want     map[string]float64
+	}{
+		{
+			testName: "Blank Input",
+			input: make(map[string]*Metric),
+			want: make(map[string]float64),
+		},
+		{
+			testName: "Normal Input",
+			input: map[string]*Metric {
+				"one": &Metric{data: 1},
+				"two": &Metric{data: 2},
+				"three": &Metric{data: 3},
+			},
+			want: map[string]float64 {
+				"one": 1,
+				"two": 2,
+				"three": 3,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		output := convertMap(tc.input)
+
+		equal := true
+		for key, value := range tc.want {
+			if outputVal, ok := output[key]; !ok {
+				equal = false
+			} else if outputVal != value {
+				equal = false
+			}
+		}
+
+		if !equal {
+			t.Errorf("Got %v expected %v", output, tc.want)
+		}
+	}
+}
+
 func createLogger() *gosteno.Logger {
 	//Ceate logger
 	config := &gosteno.Config{
@@ -136,4 +217,9 @@ func createLogger() *gosteno.Logger {
 
 	gosteno.Init(config)
 	return gosteno.NewLogger("logger")
+}
+
+func createTestResource() *Resource {
+	deployment, job, index, ip := "deployment", "job", "index", "ip"
+	return CreateResource(deployment, job, index, ip)
 }
