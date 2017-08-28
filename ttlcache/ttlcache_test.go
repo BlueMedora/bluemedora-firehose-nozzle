@@ -1,6 +1,7 @@
 package ttlcache
 
 import (
+	"time"
 	"testing"
 )
 
@@ -104,5 +105,31 @@ func TestGetOrigin(t *testing.T) {
 		}
 	} else {
 		t.Error("No origin map found")
+	}
+}
+
+func TestCacheCleanup(t *testing.T) {
+	expiration := time.Now().Add(time.Second)
+
+	cache := &TTLCache{
+		origins: make(map[string]map[string]*Resource),
+	}
+
+	resource := createTestResource()
+	resource.valueMetrics["test"] = &Metric{expires: &expiration}
+
+	cache.SetResource("origin", "key", resource)
+
+	cache.cleanup()
+
+	if len(cache.origins) != 1 {
+		t.Error("Cache cleaned up before expiration")
+	}
+
+	time.Sleep(2 * time.Second)
+	cache.cleanup()
+
+	if len(cache.origins) != 0 {
+		t.Error("Failed to fully clean out cache after expiration")
 	}
 }
