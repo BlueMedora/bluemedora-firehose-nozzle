@@ -6,6 +6,7 @@ package bluemedorafirehosenozzle
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/BlueMedora/bluemedora-firehose-nozzle/ttlcache"
 	"time"
 
 	"github.com/BlueMedora/bluemedora-firehose-nozzle/nozzleconfiguration"
@@ -87,11 +88,11 @@ func (nozzle *BlueMedoraFirehoseNozzle) collectFromFirehose(authToken string) {
 
 //Method blocks until error occurs
 func (nozzle *BlueMedoraFirehoseNozzle) processMessages() error {
-	flushTicker := time.NewTicker(time.Duration(nozzle.config.MetricCacheDurationSeconds) * time.Second)
+	//Set the TTLCache metric duration
+	ttlcache.GetInstance().TTL = time.Duration(nozzle.config.MetricCacheDurationSeconds) * time.Second
+
 	for {
 		select {
-		case <-flushTicker.C:
-			nozzle.flushMetricCaches()
 		case envelope := <-nozzle.messages:
 			nozzle.cacheEnvelope(envelope)
 		case err := <-nozzle.serverErrs:
@@ -110,10 +111,6 @@ func (nozzle *BlueMedoraFirehoseNozzle) processMessages() error {
 
 func (nozzle *BlueMedoraFirehoseNozzle) cacheEnvelope(envelope *events.Envelope) {
 	nozzle.server.CacheEnvelope(envelope)
-}
-
-func (nozzle *BlueMedoraFirehoseNozzle) flushMetricCaches() {
-	nozzle.server.ClearCache()
 }
 
 func (nozzle *BlueMedoraFirehoseNozzle) handleError(err error) {
@@ -137,5 +134,4 @@ func (nozzle *BlueMedoraFirehoseNozzle) handleError(err error) {
 	}
 
 	nozzle.consumer.Close()
-	nozzle.flushMetricCaches()
 }

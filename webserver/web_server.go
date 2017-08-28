@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/BlueMedora/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedora/bluemedora-firehose-nozzle/ttlcache"
 	"github.com/BlueMedora/bluemedora-firehose-nozzle/webtoken"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -31,8 +32,6 @@ type WebServer struct {
 	mutext sync.Mutex
 	config *nozzleconfiguration.NozzleConfiguration
 	tokens map[string]*webtoken.Token //Maps token string to token object
-
-	cache map[string]map[string]Resource
 }
 
 //New creates a new WebServer
@@ -41,7 +40,6 @@ func New(config *nozzleconfiguration.NozzleConfiguration, logger *gosteno.Logger
 		logger: logger,
 		config: config,
 		tokens: make(map[string]*webtoken.Token),
-		cache:  make(map[string]map[string]Resource),
 	}
 
 	webserver.logger.Info("Registering handlers")
@@ -76,7 +74,7 @@ func New(config *nozzleconfiguration.NozzleConfiguration, logger *gosteno.Logger
 }
 
 //Start starts webserver listening
-func (webserver *WebServer) Start(keyLocation string, certLocation string) <-chan error {
+func (webserver *WebServer) Start(keyLocation, certLocation string) <-chan error {
 	webserver.logger.Infof("Start listening on port %v", webserver.config.WebServerPort)
 	errors := make(chan error, 1)
 	go func() {
@@ -264,45 +262,20 @@ func (webserver *WebServer) CacheEnvelope(envelope *events.Envelope) {
 	webserver.mutext.Lock()
 	defer webserver.mutext.Unlock()
 
+	cache := ttlcache.GetInstance()
+
 	key := createEnvelopeKey(envelope)
 	webserver.logger.Debugf("Caching envelope origin %s with key %s", envelope.GetOrigin(), key)
 
-	//Find origin map
-	var resourceCache map[string]Resource
-
-	if value, ok := webserver.cache[envelope.GetOrigin()]; ok {
-		resourceCache = value
-	} else {
-		resourceCache = make(map[string]Resource)
-		webserver.cache[envelope.GetOrigin()] = resourceCache
-	}
-
-	//Check to see if resource exists in origin map
-	var resource Resource
-	if value, ok := resourceCache[key]; ok {
+	var resource *ttlcache.Resource
+	if value, ok := cache.GetResource(envelope.GetOrigin(), key); ok {
 		resource = value
 	} else {
-		resource = Resource{
-			Deployment:     envelope.GetDeployment(),
-			Job:            envelope.GetJob(),
-			Index:          envelope.GetIndex(),
-			IP:             envelope.GetIp(),
-			ValueMetrics:   make(map[string]float64),
-			CounterMetrics: make(map[string]float64),
-		}
+		resource = ttlcache.CreateResource(envelope.GetDeployment(), envelope.GetJob(), envelope.GetIndex(), envelope.GetIp())
+		cache.SetResource(envelope.GetOrigin(), key, resource)
 	}
 
-	addMetric(envelope, resource.ValueMetrics, resource.CounterMetrics, webserver.logger)
-	resourceCache[key] = resource
-}
-
-//ClearCache clears out cache for server
-func (webserver *WebServer) ClearCache() {
-	webserver.logger.Info("Flushing Cache")
-	webserver.mutext.Lock()
-	defer webserver.mutext.Unlock()
-
-	webserver.cache = make(map[string]map[string]Resource)
+	resource.AddMetric(envelope, webserver.logger)
 }
 
 func (webserver *WebServer) processResourceRequest(originType string, w http.ResponseWriter, r *http.Request) {
@@ -330,17 +303,15 @@ func (webserver *WebServer) processResourceRequest(originType string, w http.Res
 }
 
 func (webserver *WebServer) sendOriginBytes(originType string, w http.ResponseWriter) {
-	resourceMap := webserver.cache[originType]
-
 	var messageBytes []byte
-
-	if resourceMap == nil {
-		w.WriteHeader(http.StatusNoContent)
-		messageBytes = []byte("{}")
-	} else {
+	if resourceMap, ok := ttlcache.GetInstance().GetOrigin(originType); ok {
 		w.WriteHeader(http.StatusOK)
 		values := getValues(resourceMap)
 		messageBytes, _ = json.Marshal(values)
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+		messageBytes = []byte("{}")
+
 	}
 
 	_, err := w.Write(messageBytes)
