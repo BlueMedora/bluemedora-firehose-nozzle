@@ -1,8 +1,8 @@
 package ttlcache
 
 import (
-	"time"
 	"testing"
+	"time"
 )
 
 func TestGetInstance(t *testing.T) {

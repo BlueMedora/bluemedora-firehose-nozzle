@@ -13,6 +13,7 @@ import (
 	"github.com/BlueMedora/bluemedora-firehose-nozzle/logger"
 	"github.com/BlueMedora/bluemedora-firehose-nozzle/nozzleconfiguration"
 	"github.com/BlueMedora/bluemedora-firehose-nozzle/testhelpers"
+	"github.com/BlueMedora/bluemedora-firehose-nozzle/ttlcache"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -36,7 +37,7 @@ var (
 func TestTokenEndpoint(t *testing.T) {
 	server, config = createWebServer(t)
 
-	t.Log("Setting up server envrionment...")
+	t.Log("Setting up server environment...")
 	testhelpers.GenerateCertFiles()
 	errors := server.Start(testKeyLocation, testCertLocation)
 
@@ -61,7 +62,7 @@ func TestTokenEndpoint(t *testing.T) {
 
 func TestNoTokenEndpointRequest(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -72,7 +73,7 @@ func TestNoTokenEndpointRequest(t *testing.T) {
 
 func TestPutRequestToResourceEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -83,7 +84,7 @@ func TestPutRequestToResourceEndpoint(t *testing.T) {
 
 func TestNoCacheDataEndpointRequest(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -97,7 +98,7 @@ func TestNoCacheDataEndpointRequest(t *testing.T) {
 
 func TestMetronAgentEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -110,7 +111,7 @@ func TestMetronAgentEndpoint(t *testing.T) {
 
 func TestSyslogDrainBinderEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -123,7 +124,7 @@ func TestSyslogDrainBinderEndpoint(t *testing.T) {
 
 func TestTPSWatcherEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -136,7 +137,7 @@ func TestTPSWatcherEndpoint(t *testing.T) {
 
 func TestTPSListenerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -149,7 +150,7 @@ func TestTPSListenerEndpoint(t *testing.T) {
 
 func TestStagerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -162,7 +163,7 @@ func TestStagerEndpoint(t *testing.T) {
 
 func TestSSHProxiesEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -175,7 +176,7 @@ func TestSSHProxiesEndpoint(t *testing.T) {
 
 func TestSenderEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -188,7 +189,7 @@ func TestSenderEndpoint(t *testing.T) {
 
 func TestRouteEmitterEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -201,7 +202,7 @@ func TestRouteEmitterEndpoint(t *testing.T) {
 
 func TestRepEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -214,7 +215,7 @@ func TestRepEndpoint(t *testing.T) {
 
 func TestReceptorEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -227,7 +228,7 @@ func TestReceptorEndpoint(t *testing.T) {
 
 func TestNSYNCListenerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -240,7 +241,7 @@ func TestNSYNCListenerEndpoint(t *testing.T) {
 
 func TestNSYNCBulkerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -253,7 +254,7 @@ func TestNSYNCBulkerEndpoint(t *testing.T) {
 
 func TestGardenLinuxEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -266,7 +267,7 @@ func TestGardenLinuxEndpoint(t *testing.T) {
 
 func TestFileServerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -279,7 +280,7 @@ func TestFileServerEndpoint(t *testing.T) {
 
 func TestFetcherEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -292,7 +293,7 @@ func TestFetcherEndpoint(t *testing.T) {
 
 func TestConvergerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -305,7 +306,7 @@ func TestConvergerEndpoint(t *testing.T) {
 
 func TestCCUploaderEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -318,7 +319,7 @@ func TestCCUploaderEndpoint(t *testing.T) {
 
 func TestbbsEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -331,7 +332,7 @@ func TestbbsEndpoint(t *testing.T) {
 
 func TestAuctioneerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -344,7 +345,7 @@ func TestAuctioneerEndpoint(t *testing.T) {
 
 func TestetcdEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -357,7 +358,7 @@ func TestetcdEndpoint(t *testing.T) {
 
 func TestDopplerServerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -370,7 +371,7 @@ func TestDopplerServerEndpoint(t *testing.T) {
 
 func TestCloudControllerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -383,7 +384,7 @@ func TestCloudControllerEndpoint(t *testing.T) {
 
 func TestTrafficControllerEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -396,7 +397,7 @@ func TestTrafficControllerEndpoint(t *testing.T) {
 
 func TestGoRouterEndpoint(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -409,7 +410,7 @@ func TestGoRouterEndpoint(t *testing.T) {
 
 func TestTokenTimeout(t *testing.T) {
 	if server == nil {
-		t.Fatalf("Server failed to initalize in first test")
+		t.Fatalf("Server failed to initialize in first test")
 	}
 
 	client := createHTTPClient(t)
@@ -514,8 +515,6 @@ func endPointTest(t *testing.T, client *http.Client, token string, port uint32, 
 }
 
 func noTokenEndPointTest(t *testing.T, client *http.Client, port uint32, server *WebServer) {
-	cacheEnvelope(goRouterOrigin, server)
-
 	request := createResourceRequest(t, "", port, "gorouters")
 
 	t.Logf("Check if server response to no token request... (expecting status code: %v)", http.StatusUnauthorized)
@@ -542,7 +541,12 @@ func resourcePutEndPointTest(t *testing.T, client *http.Client, port uint32) {
 }
 
 func noCachedDataTest(t *testing.T, client *http.Client, token string, port uint32, server *WebServer) {
+	cacheEnvelope(goRouterOrigin, server)
+
 	request := createResourceRequest(t, token, port, "gorouters")
+
+	//Give the cache time to clearout
+	time.Sleep(20 * time.Second)
 
 	t.Logf("Check if server response to put resource endpoint request... (expecting status code: %v)", http.StatusNoContent)
 	response, err := client.Do(request)
@@ -564,6 +568,9 @@ func createWebServer(t *testing.T) (*WebServer, *nozzleconfiguration.NozzleConfi
 	if err != nil {
 		t.Fatalf("Error while loading configuration: %s", err.Error())
 	}
+
+	cache := ttlcache.GetInstance()
+	cache.TTL = time.Second
 
 	t.Log("Created webserver")
 	return New(config, logger), config
