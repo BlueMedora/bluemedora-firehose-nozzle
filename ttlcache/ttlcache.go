@@ -44,7 +44,7 @@ func (cache *TTLCache) GetResource(originKey, key string) (resource *Resource, f
 	cache.mutext.RLock()
 	defer cache.mutext.RUnlock()
 
-	if origin, found := cache.origins[originKey]; found {
+	if origin, exists := cache.origins[originKey]; exists {
 		resource, found = origin[key]
 	}
 	return resource, found
