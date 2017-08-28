@@ -1,11 +1,11 @@
-[![Build Status](https://travis-ci.org/BlueMedora/bluemedora-firehose-nozzle.svg?branch=master)](https://travis-ci.org/BlueMedora/bluemedora-firehose-nozzle) 
+[![Build Status](https://travis-ci.org/BlueMedoraPublic/bluemedora-firehose-nozzle.svg?branch=master)](https://travis-ci.org/BlueMedoraPublic/bluemedora-firehose-nozzle) 
 # bluemedora-firehose-nozzle
 
 The **bluemedora-firehose-nozzle** is a Cloud Foundry component which collects metrics for the Loggregator Firehose and exposes them via a RESTful API.
 
 ## BOSH Release
 
-If you wish to use BOSH to deploy the nozzle, the BOSH release for can be found [here](https://github.com/BlueMedora/bluemedora-firehose-nozzle-release).
+If you wish to use BOSH to deploy the nozzle, the BOSH release for can be found [here](https://github.com/BlueMedoraPublic/bluemedora-firehose-nozzle-release).
 
 ## Deploying as CF App
 
