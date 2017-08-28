@@ -1,6 +1,7 @@
 package ttlcache
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -88,7 +89,7 @@ func TestCleanup(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	resource.cleanup()
-	
+
 	if !resource.isEmpty() {
 		t.Error("Resource was not empty after metrics expired")
 	}
@@ -163,24 +164,24 @@ func TestAddMetric(t *testing.T) {
 func TestConvertMap(t *testing.T) {
 	testCases := []struct {
 		testName string
-		input	 map[string]*Metric
+		input    map[string]*Metric
 		want     map[string]float64
 	}{
 		{
 			testName: "Blank Input",
-			input: make(map[string]*Metric),
-			want: make(map[string]float64),
+			input:    make(map[string]*Metric),
+			want:     make(map[string]float64),
 		},
 		{
 			testName: "Normal Input",
-			input: map[string]*Metric {
-				"one": &Metric{data: 1},
-				"two": &Metric{data: 2},
+			input: map[string]*Metric{
+				"one":   &Metric{data: 1},
+				"two":   &Metric{data: 2},
 				"three": &Metric{data: 3},
 			},
-			want: map[string]float64 {
-				"one": 1,
-				"two": 2,
+			want: map[string]float64{
+				"one":   1,
+				"two":   2,
 				"three": 3,
 			},
 		},
@@ -204,6 +205,38 @@ func TestConvertMap(t *testing.T) {
 	}
 }
 
+func TestMarshalJSON(t *testing.T) {
+	want := `{"Deployment":"deployment","Job":"job","Index":"index","IP":"ip","ValueMetrics":{"one":1},"CounterMetrics":{"one":1}}`
+
+	resource := createTestResource()
+
+	resource.valueMetrics["one"] = &Metric{data: 1}
+
+	resource.counterMetrics["one"] = &Metric{data: 1}
+
+	messageBytes, err := resource.MarshalJSON()
+	if err != nil {
+		t.Errorf("Error marshalling json %s", err.Error())
+	}
+
+	jsonString := string(messageBytes)
+
+	if jsonString != want {
+		t.Errorf("Failed testing Marshall directly, expecting %s\n got %s", want, jsonString)
+	}
+
+	//Testing using json package
+	messageBytes, err = json.Marshal(resource)
+	if err != nil {
+		t.Errorf("Error marshalling json %s", err.Error())
+	}
+
+	jsonString = string(messageBytes)
+	if jsonString != want {
+		t.Errorf("Failed testing with json package, expecting %s\n got %s", want, jsonString)
+	}
+}
+
 func createLogger() *gosteno.Logger {
 	//Ceate logger
 	config := &gosteno.Config{
@@ -222,4 +255,5 @@ func createLogger() *gosteno.Logger {
 func createTestResource() *Resource {
 	deployment, job, index, ip := "deployment", "job", "index", "ip"
 	return CreateResource(deployment, job, index, ip)
+
 }

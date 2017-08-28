@@ -102,7 +102,7 @@ func (r *Resource) getMetric(metricMap map[string]*Metric, metricName string) *M
 	return metric
 }
 
-func (r *Resource) MarshallJSON() ([]byte, error) {
+func (r *Resource) MarshalJSON() ([]byte, error) {
 	valueMetrics, counterMetrics := convertMap(r.valueMetrics), convertMap(r.counterMetrics)
 
 	return json.Marshal(&struct {
