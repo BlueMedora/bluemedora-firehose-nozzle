@@ -97,6 +97,7 @@ func TestCleanup(t *testing.T) {
 
 func TestAddMetric(t *testing.T) {
 	origin, deployment, job, index, ip := "origin", "deployment", "job", "index", "ip"
+	timestamp := time.Now().UnixNano()
 	metricName, counterName := "metric", "counter"
 	value, delta, total := float64(24), uint64(24), uint64(24)
 	valueType, counterType := events.Envelope_ValueMetric, events.Envelope_CounterEvent
@@ -109,6 +110,7 @@ func TestAddMetric(t *testing.T) {
 		Job:        &job,
 		Index:      &index,
 		Ip:         &ip,
+		Timestamp:  &timestamp,
 		EventType:  &valueType,
 		ValueMetric: &events.ValueMetric{
 			Name:  &metricName,
@@ -122,6 +124,7 @@ func TestAddMetric(t *testing.T) {
 		Job:        &job,
 		Index:      &index,
 		Ip:         &ip,
+		Timestamp:  &timestamp,
 		EventType:  &counterType,
 		CounterEvent: &events.CounterEvent{
 			Name:  &counterName,
@@ -165,24 +168,24 @@ func TestConvertMap(t *testing.T) {
 	testCases := []struct {
 		testName string
 		input    map[string]*Metric
-		want     map[string]float64
+		want     map[string]metricJSON
 	}{
 		{
 			testName: "Blank Input",
 			input:    make(map[string]*Metric),
-			want:     make(map[string]float64),
+			want:     make(map[string]metricJSON),
 		},
 		{
 			testName: "Normal Input",
 			input: map[string]*Metric{
-				"one":   &Metric{data: 1},
-				"two":   &Metric{data: 2},
-				"three": &Metric{data: 3},
+				"one":   &Metric{data: 1, timestamp: int64(1257894000000000000)},
+				"two":   &Metric{data: 2, timestamp: int64(1257894000000000000)},
+				"three": &Metric{data: 3, timestamp: int64(1257894000000000000)},
 			},
-			want: map[string]float64{
-				"one":   1,
-				"two":   2,
-				"three": 3,
+			want: map[string]metricJSON{
+				"one":   metricJSON{Value: 1, Timestamp: int64(1257894000000000000)},
+				"two":   metricJSON{Value: 2, Timestamp: int64(1257894000000000000)},
+				"three": metricJSON{Value: 3, Timestamp: int64(1257894000000000000)},
 			},
 		},
 	}
@@ -206,13 +209,13 @@ func TestConvertMap(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	want := `{"Deployment":"deployment","Job":"job","Index":"index","IP":"ip","ValueMetrics":{"one":1},"CounterMetrics":{"one":1}}`
+	want := `{"Deployment":"deployment","Job":"job","Index":"index","IP":"ip","ValueMetrics":{"one":{"value":1,"timestamp":1257894000000000000}},"CounterMetrics":{"one":{"value":1,"timestamp":1257894000000000000}}}`
 
 	resource := createTestResource()
 
-	resource.valueMetrics["one"] = &Metric{data: 1}
+	resource.valueMetrics["one"] = &Metric{data: 1, timestamp: int64(1257894000000000000)}
 
-	resource.counterMetrics["one"] = &Metric{data: 1}
+	resource.counterMetrics["one"] = &Metric{data: 1, timestamp: int64(1257894000000000000)}
 
 	messageBytes, err := resource.MarshalJSON()
 	if err != nil {

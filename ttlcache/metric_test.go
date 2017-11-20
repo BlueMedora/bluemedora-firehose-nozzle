@@ -30,11 +30,27 @@ func TestGetData(t *testing.T) {
 		t.Errorf("Expected %f got %f", data, metricData)
 	}
 }
+func TestGetTimestamp(t *testing.T) {
+	timestamp := time.Now().UnixNano()
+	metric := &Metric{timestamp: timestamp}
+
+	metricTimestamp := metric.getTimestamp()
+	if metricTimestamp != timestamp {
+		t.Errorf("Expected %d got %d", timestamp, metricTimestamp)
+	}
+}
 
 func TestUpdate(t *testing.T) {
 	metric := &Metric{}
-	metric.update(35, time.Second)
+	timestamp := time.Now().UnixNano()
+	data := float64(35)
+
+	metric.update(data, timestamp, time.Second)
 	if metric.expired() {
 		t.Error("Expected item to not be expired after update")
+	} else if metricData := metric.data; metricData != data {
+		t.Errorf("Expected data %f got %f", data, metricData)
+	} else if metricTime := metric.timestamp; metricTime != timestamp {
+		t.Errorf("Expected timestamp %d got %d", timestamp, metricTime)
 	}
 }
