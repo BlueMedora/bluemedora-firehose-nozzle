@@ -165,21 +165,21 @@ A JSON response will be sent in the following form:
       "ValueMetrics":{
          "MetricName":{
            "value": integer_value,
-           "timestamp": interger_unix_nanosecond_timestamp
+           "timestamp": integer_unix_nanosecond_timestamp
          },
          "MetricName":{
            "value": integer_value,
-           "timestamp": interger_unix_nanosecond_timestamp
+           "timestamp": integer_unix_nanosecond_timestamp
          }
       },
       "CounterMetrics":{
          "MetricName":{
            "value": integer_value,
-           "timestamp": interger_unix_nanosecond_timestamp
+           "timestamp": integer_unix_nanosecond_timestamp
          },
          "MetricName":{
            "value": integer_value,
-           "timestamp": interger_unix_nanosecond_timestamp
+           "timestamp": integer_unix_nanosecond_timestamp
          }
       }
    }
