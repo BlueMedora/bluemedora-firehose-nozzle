@@ -163,12 +163,24 @@ A JSON response will be sent in the following form:
       "Index":"0",
       "IP":"X.X.X.X",
       "ValueMetrics":{
-         "MetricName":integer_value,
-         "MetricName":integer_value
+         "MetricName":{
+           "value": integer_value,
+           "timestamp": integer_unix_nanosecond_timestamp
+         },
+         "MetricName":{
+           "value": integer_value,
+           "timestamp": integer_unix_nanosecond_timestamp
+         }
       },
       "CounterMetrics":{
-         "MetricName":integer_value,
-         "MetricName":integer_value
+         "MetricName":{
+           "value": integer_value,
+           "timestamp": integer_unix_nanosecond_timestamp
+         },
+         "MetricName":{
+           "value": integer_value,
+           "timestamp": integer_unix_nanosecond_timestamp
+         }
       }
    }
 ]

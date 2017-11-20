@@ -34,14 +34,16 @@ func CreateResource(deployment, job, index, ip string) *Resource {
 //AddMetric adds a metric to a resource
 func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) {
 	var metric *Metric
+
+	timestamp := envelope.GetTimestamp()
+
 	switch envelope.GetEventType() {
 	case events.Envelope_ValueMetric:
 		valueMetric := envelope.GetValueMetric()
 		r.mutext.Lock()
 
 		metric = r.getMetric(r.valueMetrics, valueMetric.GetName())
-		metric.update(valueMetric.GetValue(), GetInstance().TTL)
-
+		metric.update(valueMetric.GetValue(), timestamp, GetInstance().TTL)
 		r.mutext.Unlock()
 		logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
 	case events.Envelope_CounterEvent:
@@ -49,7 +51,7 @@ func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) 
 		r.mutext.Lock()
 
 		metric = r.getMetric(r.counterMetrics, counterEvent.GetName())
-		metric.update(float64(counterEvent.GetTotal()), GetInstance().TTL)
+		metric.update(float64(counterEvent.GetTotal()), timestamp, GetInstance().TTL)
 
 		r.mutext.Unlock()
 		logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
@@ -102,6 +104,12 @@ func (r *Resource) getMetric(metricMap map[string]*Metric, metricName string) *M
 	return metric
 }
 
+//metricJSON is a private struct for structure metrics in JSON
+type metricJSON struct {
+	Value     float64 `json:"value"`
+	Timestamp int64   `json:"timestamp"`
+}
+
 func (r *Resource) MarshalJSON() ([]byte, error) {
 	valueMetrics, counterMetrics := convertMap(r.valueMetrics), convertMap(r.counterMetrics)
 
@@ -110,8 +118,8 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		Job            string
 		Index          string
 		IP             string
-		ValueMetrics   map[string]float64
-		CounterMetrics map[string]float64
+		ValueMetrics   map[string]metricJSON
+		CounterMetrics map[string]metricJSON
 	}{
 		Deployment:     r.deployment,
 		Job:            r.job,
@@ -122,10 +130,10 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func convertMap(inputMap map[string]*Metric) map[string]float64 {
-	outputMap := make(map[string]float64)
+func convertMap(inputMap map[string]*Metric) map[string]metricJSON {
+	outputMap := make(map[string]metricJSON)
 	for key, metric := range inputMap {
-		outputMap[key] = metric.getData()
+		outputMap[key] = metricJSON{Value: metric.getData(), Timestamp: metric.getTimestamp()}
 	}
 	return outputMap
 }
