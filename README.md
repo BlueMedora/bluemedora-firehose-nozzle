@@ -46,7 +46,7 @@ The Blue Medora Nozzle uses a configuration file, located at `config/bluemedora-
     "DisableAccessControl": false,
     "InsecureSSLSkipVerify": true,
     "IdleTimeoutSeconds": 30,
-    "MetricCacheDurationSeconds": 60,
+    "MetricCacheDurationSeconds": 300,
     "WebServerPort": 8081,
     "WebServerUseSSL": true
 }

@@ -7,7 +7,7 @@
     "DisableAccessControl": false,
     "InsecureSSLSkipVerify": true,
     "IdleTimeoutSeconds": 60,
-    "MetricCacheDurationSeconds": 90,
+    "MetricCacheDurationSeconds": 300,
     "WebServerPort": 8081,
     "WebServerUseSSL": true
 }

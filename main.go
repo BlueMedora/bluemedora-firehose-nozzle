@@ -56,7 +56,7 @@ func normalSetup() {
 	server := createWebServer(config)
 
 	nozzle := bluemedorafirehosenozzle.New(config, server, logger)
-	nozzle.Start()
+	err = nozzle.Start()
 
 	if err != nil {
 		logger.Fatalf("Error while running nozzle: %s", err.Error())
