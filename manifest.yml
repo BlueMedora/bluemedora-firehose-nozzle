@@ -18,3 +18,4 @@ applications:
     BM_WEBSERVER_USE_SSL: false
     BM_STDOUT_LOGGING: true
     BM_LOG_LEVEL: info
+    GOPACKAGENAME: github.com/BlueMedora/bluemedora-firehose-nozzle
