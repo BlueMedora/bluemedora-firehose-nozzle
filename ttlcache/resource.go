@@ -71,8 +71,6 @@ func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) 
 	default:
 		logger.Warnf("Unknown event type %s", envelope.GetEventType())
 	}
-
-	logger.Debugf("After adding the metric: %s", metrics)
 }
 
 func (r *Resource) isEmpty() bool {
