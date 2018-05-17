@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/logger"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/nozzleconfiguration"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/testhelpers"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/ttlcache"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/testhelpers"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 

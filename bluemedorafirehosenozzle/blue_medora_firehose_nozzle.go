@@ -6,11 +6,11 @@ package bluemedorafirehosenozzle
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/ttlcache"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 	"time"
 
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/nozzleconfiguration"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/webserver"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webserver"
 	"github.com/cloudfoundry-incubator/uaago"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/noaa/consumer"

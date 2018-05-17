@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/nozzleconfiguration"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/ttlcache"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/webtoken"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webtoken"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
