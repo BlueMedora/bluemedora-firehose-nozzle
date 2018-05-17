@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/ttlcache"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )

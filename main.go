@@ -6,10 +6,10 @@ package main
 import (
 	"flag"
 
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/bluemedorafirehosenozzle"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/logger"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/nozzleconfiguration"
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/webserver"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/bluemedorafirehosenozzle"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webserver"
 )
 
 const (

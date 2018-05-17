@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/BlueMedora/bluemedora-firehose-nozzle/logger"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
 )
 
 const (
