@@ -3,6 +3,7 @@ package ttlcache
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -24,8 +25,8 @@ func TestCreateResource(t *testing.T) {
 				job:            job,
 				index:          index,
 				ip:             ip,
-				valueMetrics:   make(map[string]*Metric),
-				counterMetrics: make(map[string]*Metric),
+				valueMetrics:   make(map[string][]*Metric),
+				counterMetrics: make(map[string][]*Metric),
 			},
 		},
 	}
@@ -46,15 +47,14 @@ func TestGetMetric(t *testing.T) {
 	resource := createTestResource()
 
 	//Create new metric
-	metric := resource.getMetric(resource.valueMetrics, dummy)
+	metrics := resource.getMetrics(resource.valueMetrics, dummy)
+	// if len(metrics) != 0 {
+	// 	t.Error("No new metric created")
+	// }
 
-	if metric == nil {
-		t.Error("No new metric created")
-	}
-
-	newMetric := resource.getMetric(resource.valueMetrics, dummy)
-	if newMetric != metric {
-		t.Errorf("Expecting %v, got %v", metric, newMetric)
+	newMetric := resource.getMetrics(resource.valueMetrics, dummy)
+	if !reflect.DeepEqual(newMetric, metrics) {
+		t.Errorf("Expecting %v, got %v", metrics, newMetric)
 	}
 }
 
@@ -65,7 +65,7 @@ func TestIsEmpty(t *testing.T) {
 		t.Error("Resource was not empty")
 	}
 
-	resource.valueMetrics["test"] = &Metric{}
+	resource.valueMetrics["test"] = []*Metric{&Metric{}}
 
 	if resource.isEmpty() {
 		t.Error("Resource was empty")
@@ -76,8 +76,8 @@ func TestCleanup(t *testing.T) {
 	expiration := time.Now().Add(time.Second)
 	resource := createTestResource()
 
-	resource.valueMetrics["test"] = &Metric{expires: &expiration}
-	resource.counterMetrics["test"] = &Metric{expires: &expiration}
+	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}}
+	resource.counterMetrics["test"] = []*Metric{&Metric{expires: &expiration}}
 
 	resource.cleanup()
 
@@ -142,8 +142,8 @@ func TestAddMetric(t *testing.T) {
 		t.Error("No metrics found in resource")
 	}
 
-	metric := resource.getMetric(resource.valueMetrics, metricName)
-	if metric == nil || metric.data != value {
+	metrics := resource.getMetrics(resource.valueMetrics, metricName)
+	if metrics == nil || len(metrics) == 0 || metrics[0].data != value {
 		t.Errorf("Metric %s not stored correctly", metricName)
 	}
 
@@ -156,8 +156,8 @@ func TestAddMetric(t *testing.T) {
 		t.Error("No metrics found in resource")
 	}
 
-	metric = resource.getMetric(resource.counterMetrics, counterName)
-	if metric == nil || metric.data != float64(total) {
+	metrics = resource.getMetrics(resource.counterMetrics, counterName)
+	if metrics == nil || len(metrics) == 0 || metrics[0].data != float64(total) {
 		t.Errorf("Metric %s not stored correctly", counterName)
 	}
 
@@ -167,25 +167,25 @@ func TestAddMetric(t *testing.T) {
 func TestConvertMap(t *testing.T) {
 	testCases := []struct {
 		testName string
-		input    map[string]*Metric
-		want     map[string]metricJSON
+		input    map[string][]*Metric
+		want     map[string]metricsJSON
 	}{
 		{
 			testName: "Blank Input",
-			input:    make(map[string]*Metric),
-			want:     make(map[string]metricJSON),
+			input:    make(map[string][]*Metric),
+			want:     make(map[string]metricsJSON),
 		},
 		{
 			testName: "Normal Input",
-			input: map[string]*Metric{
-				"one":   &Metric{data: 1, timestamp: int64(1257894000000000000)},
-				"two":   &Metric{data: 2, timestamp: int64(1257894000000000000)},
-				"three": &Metric{data: 3, timestamp: int64(1257894000000000000)},
+			input: map[string][]*Metric{
+				"one":   []*Metric{&Metric{data: 1, timestamp: int64(1257894000000000000)}},
+				"two":   []*Metric{&Metric{data: 2, timestamp: int64(1257894000000000000)}},
+				"three": []*Metric{&Metric{data: 3, timestamp: int64(1257894000000000000)}},
 			},
-			want: map[string]metricJSON{
-				"one":   metricJSON{Value: 1, Timestamp: int64(1257894000000000000)},
-				"two":   metricJSON{Value: 2, Timestamp: int64(1257894000000000000)},
-				"three": metricJSON{Value: 3, Timestamp: int64(1257894000000000000)},
+			want: map[string]metricsJSON{
+				"one":   metricsJSON{[]metricJSON{metricJSON{Value: 1, Timestamp: int64(1257894000000000000)}}},
+				"two":   metricsJSON{[]metricJSON{metricJSON{Value: 2, Timestamp: int64(1257894000000000000)}}},
+				"three": metricsJSON{[]metricJSON{metricJSON{Value: 3, Timestamp: int64(1257894000000000000)}}},
 			},
 		},
 	}
@@ -197,7 +197,7 @@ func TestConvertMap(t *testing.T) {
 		for key, value := range tc.want {
 			if outputVal, ok := output[key]; !ok {
 				equal = false
-			} else if outputVal != value {
+			} else if !reflect.DeepEqual(outputVal, value) {
 				equal = false
 			}
 		}
@@ -209,13 +209,13 @@ func TestConvertMap(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	want := `{"Deployment":"deployment","Job":"job","Index":"index","IP":"ip","ValueMetrics":{"one":{"value":1,"timestamp":1257894000000000000}},"CounterMetrics":{"one":{"value":1,"timestamp":1257894000000000000}}}`
+	want := `{"Deployment":"deployment","Job":"job","Index":"index","IP":"ip","ValueMetrics":{"one":{"metrics":[{"value":1,"timestamp":1257894000000000000}]}},"CounterMetrics":{"one":{"metrics":[{"value":1,"timestamp":1257894000000000000}]}}}`
 
 	resource := createTestResource()
 
-	resource.valueMetrics["one"] = &Metric{data: 1, timestamp: int64(1257894000000000000)}
+	resource.valueMetrics["one"] = []*Metric{&Metric{data: 1, timestamp: int64(1257894000000000000)}}
 
-	resource.counterMetrics["one"] = &Metric{data: 1, timestamp: int64(1257894000000000000)}
+	resource.counterMetrics["one"] = []*Metric{&Metric{data: 1, timestamp: int64(1257894000000000000)}}
 
 	messageBytes, err := resource.MarshalJSON()
 	if err != nil {

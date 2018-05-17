@@ -78,8 +78,14 @@ func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) 
 func (r *Resource) isEmpty() bool {
 	r.mutext.RLock()
 	defer r.mutext.RUnlock()
-	count := len(r.valueMetrics)
-	count += len(r.counterMetrics)
+	count := 0
+	for _, metrics := range r.valueMetrics {
+		count += len(metrics)
+	}
+	// count := len(r.valueMetrics)
+	for _, metrics := range r.counterMetrics {
+		count += len(metrics)
+	}
 	return count == 0
 }
 
@@ -87,30 +93,23 @@ func (r *Resource) cleanup() {
 	r.mutext.Lock()
 	defer r.mutext.Unlock()
 
-	for _, metrics := range r.valueMetrics {
-		for index, metric := range metrics {
-			if metric.expired() {
-				metrics = deleteExpiredMetrics(metrics, index)
-			}
-		}
+	for key, metrics := range r.valueMetrics {
+		r.valueMetrics[key] = nonExpiredMetric(metrics)
 	}
 
-	for _, metrics := range r.counterMetrics {
-		for index, metric := range metrics {
-			if metric.expired() {
-				metrics = deleteExpiredMetrics(metrics, index)
-			}
-		}
+	for key, metrics := range r.counterMetrics {
+		r.counterMetrics[key] = nonExpiredMetric(metrics)
 	}
 }
 
-// We need to ensure that the pointers are cleaned up from the slice.
-// According to the following, this is the correct procedure:
-// https://github.com/golang/go/wiki/SliceTricks
-func deleteExpiredMetrics(metrics []*Metric, index int) []*Metric {
-	copy(metrics[index:], metrics[index+1:])
-	metrics[len(metrics)-1] = nil // or the zero value of T
-	return metrics[:len(metrics)-1]
+func nonExpiredMetric(metrics []*Metric) []*Metric {
+	var metricsToKeep []*Metric
+	for _, metric := range metrics {
+		if !metric.expired() {
+			metricsToKeep = append(metricsToKeep, metric)
+		}
+	}
+	return metricsToKeep
 }
 
 func (r *Resource) getMetrics(metricMap map[string][]*Metric, metricName string) []*Metric {
@@ -131,7 +130,7 @@ type metricJSON struct {
 
 //metricsJSON is a struct to make a slice out of the metrics
 type metricsJSON struct {
-	Metrics []*metricJSON `json:"metrics"`
+	Metrics []metricJSON `json:"metrics"`
 }
 
 func (r *Resource) MarshalJSON() ([]byte, error) {
@@ -157,10 +156,10 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 func convertMap(inputMap map[string][]*Metric) map[string]metricsJSON {
 	outputMap := make(map[string]metricsJSON)
 	for key, metrics := range inputMap {
-		var emptyList []*metricJSON
+		var emptyList []metricJSON
 		var jsonMetrics = metricsJSON{Metrics: emptyList}
 		for _, metric := range metrics {
-			jsonMetrics.Metrics = append(jsonMetrics.Metrics, &metricJSON{Value: metric.getData(), Timestamp: metric.getTimestamp()})
+			jsonMetrics.Metrics = append(jsonMetrics.Metrics, metricJSON{Value: metric.getData(), Timestamp: metric.getTimestamp()})
 		}
 		outputMap[key] = jsonMetrics
 	}
