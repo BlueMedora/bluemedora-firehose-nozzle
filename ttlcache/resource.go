@@ -15,8 +15,8 @@ type Resource struct {
 	job            string
 	index          string
 	ip             string
-	valueMetrics   map[string]*Metric
-	counterMetrics map[string]*Metric
+	valueMetrics   map[string][]*Metric
+	counterMetrics map[string][]*Metric
 }
 
 //CreateResource Creates a new resource
@@ -26,14 +26,14 @@ func CreateResource(deployment, job, index, ip string) *Resource {
 		job:            job,
 		index:          index,
 		ip:             ip,
-		valueMetrics:   make(map[string]*Metric),
-		counterMetrics: make(map[string]*Metric),
+		valueMetrics:   make(map[string][]*Metric),
+		counterMetrics: make(map[string][]*Metric),
 	}
 }
 
 //AddMetric adds a metric to a resource
 func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) {
-	var metric *Metric
+	var metrics []*Metric
 
 	timestamp := envelope.GetTimestamp()
 
@@ -42,17 +42,22 @@ func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) 
 		valueMetric := envelope.GetValueMetric()
 		r.mutext.Lock()
 
-		metric = r.getMetric(r.valueMetrics, valueMetric.GetName())
+		metrics = r.getMetrics(r.valueMetrics, valueMetric.GetName())
+		var metric = &Metric{}
 		metric.update(valueMetric.GetValue(), timestamp, GetInstance().TTL)
+		metrics = append(metrics, metric)
+		r.valueMetrics[valueMetric.GetName()] = metrics
 		r.mutext.Unlock()
 		logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
 	case events.Envelope_CounterEvent:
 		counterEvent := envelope.GetCounterEvent()
 		r.mutext.Lock()
 
-		metric = r.getMetric(r.counterMetrics, counterEvent.GetName())
+		metrics = r.getMetrics(r.counterMetrics, counterEvent.GetName())
+		var metric = &Metric{}
 		metric.update(float64(counterEvent.GetTotal()), timestamp, GetInstance().TTL)
-
+		metrics = append(metrics, metric)
+		r.counterMetrics[counterEvent.GetName()] = metrics
 		r.mutext.Unlock()
 		logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
 	case events.Envelope_ContainerMetric:
@@ -71,8 +76,14 @@ func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) 
 func (r *Resource) isEmpty() bool {
 	r.mutext.RLock()
 	defer r.mutext.RUnlock()
-	count := len(r.valueMetrics)
-	count += len(r.counterMetrics)
+	count := 0
+	for _, metrics := range r.valueMetrics {
+		count += len(metrics)
+	}
+	// count := len(r.valueMetrics)
+	for _, metrics := range r.counterMetrics {
+		count += len(metrics)
+	}
 	return count == 0
 }
 
@@ -80,34 +91,44 @@ func (r *Resource) cleanup() {
 	r.mutext.Lock()
 	defer r.mutext.Unlock()
 
-	for key, metric := range r.valueMetrics {
-		if metric.expired() {
-			delete(r.valueMetrics, key)
-		}
+	for key, metrics := range r.valueMetrics {
+		r.valueMetrics[key] = nonExpiredMetric(metrics)
 	}
 
-	for key, metric := range r.counterMetrics {
-		if metric.expired() {
-			delete(r.counterMetrics, key)
-		}
+	for key, metrics := range r.counterMetrics {
+		r.counterMetrics[key] = nonExpiredMetric(metrics)
 	}
 }
 
-func (r *Resource) getMetric(metricMap map[string]*Metric, metricName string) *Metric {
-	var metric *Metric
+func nonExpiredMetric(metrics []*Metric) []*Metric {
+	var metricsToKeep []*Metric
+	for _, metric := range metrics {
+		if !metric.expired() {
+			metricsToKeep = append(metricsToKeep, metric)
+		}
+	}
+	return metricsToKeep
+}
+
+func (r *Resource) getMetrics(metricMap map[string][]*Metric, metricName string) []*Metric {
+	var metrics []*Metric
 	if value, ok := metricMap[metricName]; ok {
 		return value
 	}
 
-	metric = &Metric{}
-	metricMap[metricName] = metric
-	return metric
+	metricMap[metricName] = metrics
+	return metrics
 }
 
 //metricJSON is a private struct for structure metrics in JSON
 type metricJSON struct {
 	Value     float64 `json:"value"`
 	Timestamp int64   `json:"timestamp"`
+}
+
+//metricsJSON is a struct to make a slice out of the metrics
+type metricsJSON struct {
+	Metrics []metricJSON `json:"metrics"`
 }
 
 func (r *Resource) MarshalJSON() ([]byte, error) {
@@ -118,8 +139,8 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		Job            string
 		Index          string
 		IP             string
-		ValueMetrics   map[string]metricJSON
-		CounterMetrics map[string]metricJSON
+		ValueMetrics   map[string]metricsJSON
+		CounterMetrics map[string]metricsJSON
 	}{
 		Deployment:     r.deployment,
 		Job:            r.job,
@@ -130,10 +151,15 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func convertMap(inputMap map[string]*Metric) map[string]metricJSON {
-	outputMap := make(map[string]metricJSON)
-	for key, metric := range inputMap {
-		outputMap[key] = metricJSON{Value: metric.getData(), Timestamp: metric.getTimestamp()}
+func convertMap(inputMap map[string][]*Metric) map[string]metricsJSON {
+	outputMap := make(map[string]metricsJSON)
+	for key, metrics := range inputMap {
+		var emptyList []metricJSON
+		var jsonMetrics = metricsJSON{Metrics: emptyList}
+		for _, metric := range metrics {
+			jsonMetrics.Metrics = append(jsonMetrics.Metrics, metricJSON{Value: metric.getData(), Timestamp: metric.getTimestamp()})
+		}
+		outputMap[key] = jsonMetrics
 	}
 	return outputMap
 }
