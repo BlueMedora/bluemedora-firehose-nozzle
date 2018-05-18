@@ -48,9 +48,6 @@ func TestGetMetric(t *testing.T) {
 
 	//Create new metric
 	metrics := resource.getMetrics(resource.valueMetrics, dummy)
-	// if len(metrics) != 0 {
-	// 	t.Error("No new metric created")
-	// }
 
 	newMetric := resource.getMetrics(resource.valueMetrics, dummy)
 	if !reflect.DeepEqual(newMetric, metrics) {
@@ -76,8 +73,8 @@ func TestCleanup(t *testing.T) {
 	expiration := time.Now().Add(time.Second)
 	resource := createTestResource()
 
-	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}}
-	resource.counterMetrics["test"] = []*Metric{&Metric{expires: &expiration}}
+	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &expiration}}
+	resource.counterMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &expiration}}
 
 	resource.cleanup()
 
@@ -92,6 +89,38 @@ func TestCleanup(t *testing.T) {
 
 	if !resource.isEmpty() {
 		t.Error("Resource was not empty after metrics expired")
+	}
+}
+
+func TestRetainedDataAfterCleanup(t *testing.T) {
+	expiration := time.Now().Add(time.Millisecond * 500)
+	longerExpiration := time.Now().Add(time.Minute)
+	resource := createTestResource()
+
+	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &longerExpiration}}
+	resource.counterMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &longerExpiration}}
+
+	resource.cleanup()
+
+	if resource.isEmpty() {
+		t.Error("Resource was empty after adding metrics")
+	}
+
+	if len(resource.valueMetrics["test"]) != 2 || len(resource.counterMetrics["test"]) != 2 {
+		t.Error("Metrics were not created for resource")
+	}
+
+	//Sleep to allow expiration
+	time.Sleep(time.Second)
+
+	resource.cleanup()
+
+	if len(resource.valueMetrics["test"]) != 1 {
+		t.Error("Incorrect number of value metrics remain after cleanup")
+	}
+
+	if len(resource.counterMetrics["test"]) != 1 {
+		t.Error("Incorrect number of counter metrics remain after cleanup")
 	}
 }
 

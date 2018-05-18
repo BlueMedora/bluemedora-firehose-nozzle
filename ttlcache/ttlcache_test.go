@@ -116,7 +116,7 @@ func TestCacheCleanup(t *testing.T) {
 	}
 
 	resource := createTestResource()
-	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}}
+	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &expiration}}
 
 	cache.SetResource("origin", "key", resource)
 
