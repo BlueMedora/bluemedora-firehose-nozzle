@@ -408,6 +408,19 @@ func TestGoRouterEndpoint(t *testing.T) {
 	endPointTest(t, client, token, config.WebServerPort, goRouterOrigin, "gorouters", server)
 }
 
+func TestLocketEndpoint(t *testing.T) {
+	if server == nil {
+		t.Fatalf("Server failed to initialize in first test")
+	}
+
+	client := createHTTPClient(t)
+
+	//Retrieve token for other endpoint test
+	token := getToken(t, client, config)
+
+	endPointTest(t, client, token, config.WebServerPort, locketOrigin, "lockets", server)
+}
+
 func TestTokenTimeout(t *testing.T) {
 	if server == nil {
 		t.Fatalf("Server failed to initialize in first test")

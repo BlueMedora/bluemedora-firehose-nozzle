@@ -37,6 +37,7 @@ const (
 	cloudControllerOrigin   = "cc"
 	trafficControllerOrigin = "LoggregatorTrafficController"
 	goRouterOrigin          = "gorouter"
+	locketOrigin            = "locket"
 )
 
 //Resource represents cloud controller data

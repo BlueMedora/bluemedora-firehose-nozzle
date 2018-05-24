@@ -152,6 +152,7 @@ Once a valid token is acquired a `GET` request with the header pair `token` and 
 * `/cloud_controllers`
 * `/traffic_controllers`
 * `/gorouters`
+* `/lockets`
 
 A JSON response will be sent in the following form:
 
