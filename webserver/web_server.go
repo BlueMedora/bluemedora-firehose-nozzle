@@ -69,6 +69,7 @@ func New(config *nozzleconfiguration.NozzleConfiguration, logger *gosteno.Logger
 	http.HandleFunc("/cloud_controllers", webserver.cloudControllersHandler)
 	http.HandleFunc("/traffic_controllers", webserver.trafficControllersHandler)
 	http.HandleFunc("/gorouters", webserver.gorouterHandler)
+	http.HandleFunc("/lockets", webserver.locketsHandler)
 
 	return &webserver
 }
@@ -253,6 +254,11 @@ func (webserver *WebServer) trafficControllersHandler(w http.ResponseWriter, r *
 func (webserver *WebServer) gorouterHandler(w http.ResponseWriter, r *http.Request) {
 	webserver.logger.Info("Received /gorouters request")
 	webserver.processResourceRequest(goRouterOrigin, w, r)
+}
+
+func (webserver *WebServer) locketsHandler(w http.ResponseWriter, r *http.Request) {
+	webserver.logger.Info("Received /lockets request")
+	webserver.processResourceRequest(locketOrigin, w, r)
 }
 
 /**Cache Logic**/
