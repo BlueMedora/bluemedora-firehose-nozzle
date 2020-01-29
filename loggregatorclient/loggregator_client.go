@@ -6,24 +6,15 @@ package loggregatorclient
 import (
 	"context"
 	"log"
-    "os"
     "net/http"
-	
-
-
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webserver"
-	"github.com/cloudfoundry-incubator/uaago"
-
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gorilla/websocket"
+    "crypto/tls"
 
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/go-loggregator"
-	"github.com/cloudfoundry/go-loggregator/rpc/loggregator_v2"
+	"code.cloudfoundry.org/go-loggregator"
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 )
 
-type LoggregatorClient struct {
+type Client struct {
 	RLPGatewayClient *loggregator.RLPGatewayClient
 	stopConsumer context.CancelFunc
 	shardId string
@@ -36,60 +27,44 @@ type rlpGatewayHttpClient struct {
 	client       *http.Client
 }
 
-func newRLPGatewayHttpClient(token String, noVerify bool) *rlpGatewayClientDoer {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: noVerify,
-			},
-		},
-	}
-
-	return &rlpGatewayClientDoer{
-		token:        token,
-		// disableACS:   disableACS,
-		// tokenFetcher: tokenFetcher,
-		client:       client,
-	}
-}
-
-func (rlp *newRLPGatewayHttpClient) Do(req *http.Request) (*http.Response, error) {
-	req.Header.Set("Authorization", rlp.token)
-
-	// TODO: handle bad token and retry getting another one (might depend on access control)
-	resp, err := rlp.client.Do(req)
-	return resp, err
-}
-
 // "custom logger" for RLPGatewayClientLogger (:})
 type RLPLogger struct {
 	log *gosteno.Logger
 }
 
-func New(address String, token String, subscriptionId String, logger *gosteno.Logger) *LoggregatorClient {
+// to impliment 'Log' and have messages passed to app logger
+func (l RLPLogger) Write(p []byte) (n int, err error) {
+	// Todo - no errors in processing are returned from envelopestream, but they are logged here.
+	l.log.Debugf("RLP client: " + string(p))
+	return len(p), nil
+}
+
+func New(address string, token string, subscriptionId string, logger *gosteno.Logger) *Client {
 	c := loggregator.NewRLPGatewayClient(
 		address,									
-		loggregator.WithRLPGatewayClientLogger(&RLPLogger{log: logger}, "", log.LstdFlags)),
+		loggregator.WithRLPGatewayClientLogger(log.New(&RLPLogger{log: logger}, "", log.LstdFlags)),
 		loggregator.WithRLPGatewayHTTPClient(newRLPGatewayHttpClient(token, true)),
 	)
 	
-	return &LoggregatorClient{
-		rlpClient: c,
+	return &Client{
+		RLPGatewayClient: c,
 		stopConsumer: nil,
 		shardId: subscriptionId,
 	}
 }
 
-func (client *LoggregatorClient) EnvelopeStream() loggregator.EnvelopeStream {
-	ctx, client.stopConsumer = ctx.WithCancel(context.Background())
-	eventStream := client.RLPGatewayClient.Stream(
+func (client *Client) EnvelopeStream() loggregator.EnvelopeStream {
+
+	ctx, sfunc := context.WithCancel(context.Background())
+	client.stopConsumer = sfunc
+	es := client.RLPGatewayClient.Stream(
 		ctx,
 		&loggregator_v2.EgressBatchRequest{
 			ShardId: client.shardId,
 			Selectors: []*loggregator_v2.Selector{
 				{
 					Message: &loggregator_v2.Selector_Counter{
-						Counter: &loggregator_v2.CounterSelector{}
+						Counter: &loggregator_v2.CounterSelector{},
 					},
 				},
 				{
@@ -100,10 +75,34 @@ func (client *LoggregatorClient) EnvelopeStream() loggregator.EnvelopeStream {
 			},
 		},
 	)
-	return eventStream
+	return es
 }
 
-func (c *LoggregatorClient) Stop() {
+func (c *Client) Stop() {
   c.stopConsumer()
 }
 
+func newRLPGatewayHttpClient(token string, noVerify bool) *rlpGatewayHttpClient {
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: noVerify,
+			},
+		},
+	}
+
+	return &rlpGatewayHttpClient{
+		token:        token,
+		// disableACS:   disableACS,
+		// tokenFetcher: tokenFetcher,
+		client:       client,
+	}
+}
+
+func (rlp *rlpGatewayHttpClient) Do(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", rlp.token)
+
+	// TODO: handle bad token and retry getting another one (might depend on access control)
+	resp, err := rlp.client.Do(req)
+	return resp, err
+}

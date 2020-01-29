@@ -1,7 +1,7 @@
 // Copyright (c) 2016 Blue Medora, Inc. All rights reserved.
 // This file is subject to the terms and conditions defined in the included file 'LICENSE.txt'.
 
-package nozzleconfiguration
+package configuration
 
 import (
 	"encoding/json"
@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-
 	"github.com/cloudfoundry/gosteno"
 )
 
@@ -29,7 +28,7 @@ const (
 )
 
 //NozzleConfiguration represents configuration file
-type NozzleConfiguration struct {
+type Configuration struct {
 	UAAURL                     string
 	UAAUsername                string
 	UAAPassword                string
@@ -44,7 +43,7 @@ type NozzleConfiguration struct {
 }
 
 //New NozzleConfiguration
-func New(configPath string, logger *gosteno.Logger) (*NozzleConfiguration, error) {
+func New(configPath string, logger *gosteno.Logger) (*Configuration, error) {
 	configPath = getAbsolutePath(configPath, logger)
 
 	configBuffer, err := ioutil.ReadFile(configPath)
@@ -53,28 +52,28 @@ func New(configPath string, logger *gosteno.Logger) (*NozzleConfiguration, error
 		return nil, fmt.Errorf("Unable to load config file bluemedora-firehose-nozzle.json: %s", err)
 	}
 
-	var nozzleConfig NozzleConfiguration
-	err = json.Unmarshal(configBuffer, &nozzleConfig)
+	var config Configuration
+	err = json.Unmarshal(configBuffer, &config)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing config file bluemedora-firehose-nozzle.json: %s", err)
 	}
 
-	overrideWithEnvVar(uaaURLEnv, &nozzleConfig.UAAURL)
-	overrideWithEnvVar(uaaUsernameEnv, &nozzleConfig.UAAUsername)
-	overrideWithEnvVar(uaaPasswordEnv, &nozzleConfig.UAAPassword)
-	overrideWithEnvVar(trafficControllerURLEnv, &nozzleConfig.TrafficControllerURL)
-	overrideWithEnvVar(subscriptionIDEnv, &nozzleConfig.SubscriptionID)
-	overrideWithEnvBool(disableAccessControlEnv, &nozzleConfig.DisableAccessControl)
-	overrideWithEnvBool(insecureSSLSkipVerifyEnv, &nozzleConfig.InsecureSSLSkipVerify)
-	overrideWithEnvUint32(idleTimeoutSecondsEnv, &nozzleConfig.IdleTimeoutSeconds)
-	overrideWithEnvUint32(metricCacheDurationSecondsEnv, &nozzleConfig.MetricCacheDurationSeconds)
-	overrideWithEnvUint32(webServerPortEnv, &nozzleConfig.WebServerPort)
-	overrideWithEnvBool(webServerUseSSLENV, &nozzleConfig.WebServerUseSSL)
+	overrideWithEnvVar(uaaURLEnv, &config.UAAURL)
+	overrideWithEnvVar(uaaUsernameEnv, &config.UAAUsername)
+	overrideWithEnvVar(uaaPasswordEnv, &config.UAAPassword)
+	overrideWithEnvVar(trafficControllerURLEnv, &config.TrafficControllerURL)
+	overrideWithEnvVar(subscriptionIDEnv, &config.SubscriptionID)
+	overrideWithEnvBool(disableAccessControlEnv, &config.DisableAccessControl)
+	overrideWithEnvBool(insecureSSLSkipVerifyEnv, &config.InsecureSSLSkipVerify)
+	overrideWithEnvUint32(idleTimeoutSecondsEnv, &config.IdleTimeoutSeconds)
+	overrideWithEnvUint32(metricCacheDurationSecondsEnv, &config.MetricCacheDurationSeconds)
+	overrideWithEnvUint32(webServerPortEnv, &config.WebServerPort)
+	overrideWithEnvBool(webServerUseSSLENV, &config.WebServerUseSSL)
 
 	logger.Debug(fmt.Sprintf("Loaded configuration to UAAURL <%s>, UAA Username <%s>, Traffic Controller URL <%s>, Disable Access Control <%v>, Insecure SSL Skip Verify <%v>",
-		nozzleConfig.UAAURL, nozzleConfig.UAAUsername, nozzleConfig.TrafficControllerURL, nozzleConfig.DisableAccessControl, nozzleConfig.InsecureSSLSkipVerify))
+		config.UAAURL, config.UAAUsername, config.TrafficControllerURL, config.DisableAccessControl, config.InsecureSSLSkipVerify))
 
-	return &nozzleConfig, nil
+	return &config, nil
 }
 
 func getAbsolutePath(configPath string, logger *gosteno.Logger) string {

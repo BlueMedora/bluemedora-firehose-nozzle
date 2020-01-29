@@ -1,4 +1,4 @@
-package ttlcache
+package results
 
 import (
 	"encoding/json"

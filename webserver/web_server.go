@@ -10,11 +10,14 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webtoken"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+
 )
 
 //Webserver Constants
@@ -30,15 +33,35 @@ const (
 type WebServer struct {
 	logger *gosteno.Logger
 	mutext sync.Mutex
-	config *nozzleconfiguration.NozzleConfiguration
+	config *Configuration
 	tokens map[string]*webtoken.Token //Maps token string to token object
 }
 
+type Configuration struct {
+	UAAUsername				   string
+	UAAPassword				   string
+	IdleTimeoutSeconds         uint32
+	MetricCacheDurationSeconds uint32
+	Port                       uint32
+	UseSSL                     bool
+}
+
+func NewConfiguration(u string, p string, itimeout uint32, cacheDuration uint32, port uint32, useSSL bool) *Configuration {
+	return &Configuration{
+		UAAUsername: u,
+		UAAPassword: p,
+		IdleTimeoutSeconds: itimeout,
+		MetricCacheDurationSeconds: cacheDuration,
+		Port: port,
+		UseSSL: useSSL,
+	}
+}
+
 //New creates a new WebServer
-func New(config *nozzleconfiguration.NozzleConfiguration, logger *gosteno.Logger) *WebServer {
-	webserver := WebServer{
-		logger: logger,
-		config: config,
+func New(c *Configuration, l *gosteno.Logger) *WebServer{
+	webserver := &WebServer{
+		logger: l,
+		config: c,
 		tokens: make(map[string]*webtoken.Token),
 	}
 
@@ -71,19 +94,19 @@ func New(config *nozzleconfiguration.NozzleConfiguration, logger *gosteno.Logger
 	http.HandleFunc("/gorouters", webserver.gorouterHandler)
 	http.HandleFunc("/lockets", webserver.locketsHandler)
 
-	return &webserver
+	return webserver
 }
 
 //Start starts webserver listening
-func (webserver *WebServer) Start(keyLocation, certLocation string) <-chan error {
-	webserver.logger.Infof("Start listening on port %v", webserver.config.WebServerPort)
+func (webserver *WebServer) Start() <-chan error {
+	webserver.logger.Infof("Start listening on port %v", webserver.config.Port)
 	errors := make(chan error, 1)
 	go func() {
 		defer close(errors)
-		if webserver.config.WebServerUseSSL {
-			errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", webserver.config.WebServerPort), getAbsolutePath(certLocation, webserver.logger), getAbsolutePath(keyLocation, webserver.logger), nil)
+		if webserver.config.UseSSL {
+			errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", webserver.config.Port), getAbsolutePath(DefaultCertLocation, webserver.logger), getAbsolutePath(DefaultKeyLocation, webserver.logger), nil)
 		} else {
-			errors <- http.ListenAndServe(fmt.Sprintf(":%v", webserver.config.WebServerPort), nil)
+			errors <- http.ListenAndServe(fmt.Sprintf(":%v", webserver.config.Port), nil)
 		}
 	}()
 	return errors
@@ -262,7 +285,9 @@ func (webserver *WebServer) locketsHandler(w http.ResponseWriter, r *http.Reques
 }
 
 /**Cache Logic**/
-
+func (webserver *WebServer) CacheEnvelnope(envelope *loggregator_v2.Envelope){
+	webserver.logger.Debug(envelope.SourceId)
+}
 //CacheEnvelope caches envelope by origin
 func (webserver *WebServer) CacheEnvelope(envelope *events.Envelope) {
 	webserver.mutext.Lock()
@@ -273,15 +298,15 @@ func (webserver *WebServer) CacheEnvelope(envelope *events.Envelope) {
 	key := createEnvelopeKey(envelope)
 	webserver.logger.Debugf("Caching envelope origin %s with key %s", envelope.GetOrigin(), key)
 
-	var resource *ttlcache.Resource
+	var resource *results.Resource
 	if value, ok := cache.GetResource(envelope.GetOrigin(), key); ok {
 		resource = value
 	} else {
-		resource = ttlcache.CreateResource(envelope.GetDeployment(), envelope.GetJob(), envelope.GetIndex(), envelope.GetIp())
+		resource = results.CreateResource(envelope.GetDeployment(), envelope.GetJob(), envelope.GetIndex(), envelope.GetIp())
 		cache.SetResource(envelope.GetOrigin(), key, resource)
 	}
 
-	resource.AddMetric(envelope, webserver.logger)
+	// resource.AddMetric(envelope, webserver.logger)
 }
 
 func (webserver *WebServer) processResourceRequest(originType string, w http.ResponseWriter, r *http.Request) {

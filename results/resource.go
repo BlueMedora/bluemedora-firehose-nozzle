@@ -1,11 +1,11 @@
-package ttlcache
+package results
 
 import (
 	"encoding/json"
 	"sync"
 
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/sonde-go/events"
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 )
 
 //Resource represents cloud controller data
@@ -32,48 +32,68 @@ func CreateResource(deployment, job, index, ip string) *Resource {
 }
 
 //AddMetric adds a metric to a resource
-func (r *Resource) AddMetric(envelope *events.Envelope, logger *gosteno.Logger) {
-	var metrics []*Metric
+func (r *Resource) AddMetric(envelope *loggregator_v2.Envelope, logger *gosteno.Logger) {
+	// var metrics []*Metric
 
-	timestamp := envelope.GetTimestamp()
+	// timestamp := envelope.GetTimestamp()
+    
+    
+	// switch envelope.Type() {
+	// case loggregator_v2.Envelope_ValueMetric:
+	// 	valueMetric := envelope.GetValueMetric()
+	// 	r.mutext.Lock()
 
-	switch envelope.GetEventType() {
-	case events.Envelope_ValueMetric:
-		valueMetric := envelope.GetValueMetric()
-		r.mutext.Lock()
+	// 	metrics = r.getMetrics(r.valueMetrics, valueMetric.GetName())
+	// 	var metric = &Metric{}
+	// 	metric.update(valueMetric.GetValue(), timestamp, GetInstance().TTL)
+	// 	metrics = append(metrics, metric)
+	// 	r.valueMetrics[valueMetric.GetName()] = metrics
+	// 	r.mutext.Unlock()
+	// 	logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
+	// case loggregator_v2.Envelope_CounterEvent:
+	// 	counterEvent := envelope.GetCounterEvent()
+	// 	r.mutext.Lock()
 
-		metrics = r.getMetrics(r.valueMetrics, valueMetric.GetName())
-		var metric = &Metric{}
-		metric.update(valueMetric.GetValue(), timestamp, GetInstance().TTL)
-		metrics = append(metrics, metric)
-		r.valueMetrics[valueMetric.GetName()] = metrics
-		r.mutext.Unlock()
-		logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
-	case events.Envelope_CounterEvent:
-		counterEvent := envelope.GetCounterEvent()
-		r.mutext.Lock()
-
-		metrics = r.getMetrics(r.counterMetrics, counterEvent.GetName())
-		var metric = &Metric{}
-		metric.update(float64(counterEvent.GetTotal()), timestamp, GetInstance().TTL)
-		metrics = append(metrics, metric)
-		r.counterMetrics[counterEvent.GetName()] = metrics
-		r.mutext.Unlock()
-		logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
-	case events.Envelope_ContainerMetric:
-		// ignored message type
-	case events.Envelope_LogMessage:
-		// ignored message type
-	case events.Envelope_HttpStartStop:
-		// ignored message type
-	case events.Envelope_Error:
-		// ignored message type
-	default:
-		logger.Warnf("Unknown event type %s", envelope.GetEventType())
-	}
+	// 	metrics = r.getMetrics(r.counterMetrics, counterEvent.GetName())
+	// 	var metric = &Metric{}
+	// 	metric.update(float64(counterEvent.GetTotal()), timestamp, GetInstance().TTL)
+	// 	metrics = append(metrics, metric)
+	// 	r.counterMetrics[counterEvent.GetName()] = metrics
+	// 	r.mutext.Unlock()
+	// 	logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
+	// case loggregator_v2.Envelope_ContainerMetric:
+	// 	// ignored message type
+	// case loggregator_v2.Envelope_LogMessage:
+	// 	// ignored message type
+	// case loggregator_v2.Envelope_HttpStartStop:
+	// 	// ignored message type
+	// case loggregator_v2.Envelope_Error:
+	// 	// ignored message type
+	// default:
+	// 	logger.Warnf("Unknown event type %s", envelope.GetEventType())
+	// }
 }
 
-func (r *Resource) isEmpty() bool {
+func parseGauge(e *loggregator_v2.Envelope_Gauge) *loggregator_v2.Envelope_Gauge {
+	if e != nil {
+		return e
+	}
+    return nil
+
+	// valueMetric := envelope.GetValueMetric()
+	// 	r.mutext.Lock()
+
+	// 	metrics = r.getMetrics(r.valueMetrics, valueMetric.GetName())
+	// 	var metric = &Metric{}
+	// 	metric.update(valueMetric.GetValue(), timestamp, GetInstance().TTL)
+	// 	metrics = append(metrics, metric)
+	// 	r.valueMetrics[valueMetric.GetName()] = metrics
+	// 	r.mutext.Unlock()
+	// 	logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
+}
+
+
+func (r *Resource) IsEmpty() bool {
 	r.mutext.RLock()
 	defer r.mutext.RUnlock()
 	count := 0
@@ -87,7 +107,7 @@ func (r *Resource) isEmpty() bool {
 	return count == 0
 }
 
-func (r *Resource) cleanup() {
+func (r *Resource) Cleanup() {
 	r.mutext.Lock()
 	defer r.mutext.Unlock()
 

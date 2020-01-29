@@ -6,10 +6,10 @@ package main
 import (
 	"flag"
 
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/bluemedorafirehosenozzle"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzle"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webserver"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"
 )
 
 const (
@@ -43,23 +43,49 @@ func main() {
 func normalSetup() {
 	logger.CreateLogDirectory(defaultLogDirectory)
 
-	logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, *logLevel)
-	logger.Debug("working log")
+	l := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, *logLevel)
+	l.Debug("working log")
 
 	//Read in config
-	config, err := nozzleconfiguration.New(defaultConfigLocation, logger)
+	c, err := configuration.New(defaultConfigLocation, l)
 	if err != nil {
-		logger.Fatalf("Error parsing config file: %s", err.Error())
+		l.Fatalf("Error parsing config file: %s", err.Error())
 	}
 
-	//Setup and start nozzle
-	server := createWebServer(config)
+	// Setup and start nozzle
+	wsl := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
+	wsc := webserver.NewConfiguration(
+		c.UAAUsername,
+		c.UAAPassword,
+		c.IdleTimeoutSeconds,
+		c.MetricCacheDurationSeconds,
+		c.WebServerPort,
+		c.WebServerUseSSL,
+		)
 
-	nozzle := bluemedorafirehosenozzle.New(config, server, logger)
-	err = nozzle.Start()
+	ws := *webserver.New(wsc, wsl)
 
-	if err != nil {
-		logger.Fatalf("Error while running nozzle: %s", err.Error())
+	nc := *nozzle.NewConfiguration(
+    	c.UAAURL, 
+    	c.UAAUsername, 
+    	c.UAAPassword, 
+    	c.TrafficControllerURL, 
+    	c.SubscriptionID, 
+    	c.DisableAccessControl, 
+    	c.InsecureSSLSkipVerify)
+    n := *nozzle.New(nc, l)
+	n.Start()
+	wsErrs := ws.Start()
+
+	for {
+		select {
+		case envelope := <-n.Messages:
+			l.Debug("printing a thing")
+			ws.CacheEnvelnope(envelope)
+		case err := <- wsErrs:
+			// I think this becomes a fatal
+			l.Fatalf("Error while running webserver: %s", err.Error())
+		}
 	}
 }
 
@@ -67,23 +93,26 @@ func standUpWebServer() {
 	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
 
 	//Read in config
-	config, err := nozzleconfiguration.New(defaultConfigLocation, logger)
+	config, err := configuration.New(defaultConfigLocation, logger)
 	if err != nil {
 		logger.Fatalf("Error parsing config file: %s", err.Error())
 	}
 
-	server := webserver.New(config, logger)
+	wsc := webserver.NewConfiguration(
+		config.UAAUsername,
+		config.UAAPassword,
+		config.IdleTimeoutSeconds,
+		config.MetricCacheDurationSeconds,
+		config.WebServerPort,
+		config.WebServerUseSSL,
+		)
+	server := webserver.New(wsc, logger)
 
 	logger.Info("Starting webserver")
-	errors := server.Start(webserver.DefaultKeyLocation, webserver.DefaultCertLocation)
+	errors := server.Start()
 
 	select {
 	case err := <-errors:
 		logger.Fatalf("Error while running server: %s", err.Error())
 	}
-}
-
-func createWebServer(config *nozzleconfiguration.NozzleConfiguration) *webserver.WebServer {
-	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
-	return webserver.New(config, logger)
 }

@@ -3,6 +3,7 @@ package ttlcache
 import (
 	"sync"
 	"time"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
 )
 
 const cacheFlushSecond = 10
@@ -10,7 +11,7 @@ const cacheFlushSecond = 10
 type TTLCache struct {
 	mutext  sync.RWMutex
 	TTL     time.Duration
-	origins map[string]map[string]*Resource
+	origins map[string]map[string]*results.Resource
 }
 
 var instance *TTLCache
@@ -25,22 +26,22 @@ func GetInstance() *TTLCache {
 	return instance
 }
 
-func (cache *TTLCache) SetResource(originKey, key string, resource *Resource) {
+func (cache *TTLCache) SetResource(originKey, key string, resource *results.Resource) {
 	cache.mutext.Lock()
 	defer cache.mutext.Unlock()
 
-	var origin map[string]*Resource
+	var origin map[string]*results.Resource
 	if value, ok := cache.origins[originKey]; ok {
 		origin = value
 	} else {
-		origin = make(map[string]*Resource)
+		origin = make(map[string]*results.Resource)
 		cache.origins[originKey] = origin
 	}
 
 	origin[key] = resource
 }
 
-func (cache *TTLCache) GetResource(originKey, key string) (resource *Resource, found bool) {
+func (cache *TTLCache) GetResource(originKey, key string) (resource *results.Resource, found bool) {
 	cache.mutext.RLock()
 	defer cache.mutext.RUnlock()
 
@@ -50,7 +51,7 @@ func (cache *TTLCache) GetResource(originKey, key string) (resource *Resource, f
 	return resource, found
 }
 
-func (cache *TTLCache) GetOrigin(originKey string) (origin map[string]*Resource, found bool) {
+func (cache *TTLCache) GetOrigin(originKey string) (origin map[string]*results.Resource, found bool) {
 	cache.mutext.RLock()
 	defer cache.mutext.RUnlock()
 
@@ -64,8 +65,8 @@ func (cache *TTLCache) cleanup() {
 
 	for originKey, origin := range cache.origins {
 		for key, resource := range origin {
-			resource.cleanup()
-			if resource.isEmpty() {
+			resource.Cleanup()
+			if resource.IsEmpty() {
 				delete(origin, key)
 			}
 		}
@@ -94,7 +95,7 @@ func (cache *TTLCache) startCleanupTimer() {
 
 func createTTLCache() *TTLCache {
 	cache := &TTLCache{
-		origins: make(map[string]map[string]*Resource),
+		origins: make(map[string]map[string]*results.Resource),
 	}
 
 	cache.startCleanupTimer()
