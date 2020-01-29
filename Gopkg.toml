@@ -53,15 +53,19 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/cloudfoundry-incubator/uaago"
+name = "github.com/cloudfoundry-incubator/uaago"
+
+[[constraint]]
+  name = "github.com/cloudfoundry/go-loggregator"
+  version = "7.7.0"
 
 [[constraint]]
   branch = "master"
   name = "github.com/cloudfoundry/gosteno"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/cloudfoundry/noaa"
+#[[constraint]]
+#  branch = "master"
+#  name = "github.com/cloudfoundry/noaa"
 
 [[constraint]]
   branch = "master"
