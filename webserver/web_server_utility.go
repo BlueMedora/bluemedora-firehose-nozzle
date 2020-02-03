@@ -56,28 +56,19 @@ func createEnvelopeKey(e *loggregator_v2.Envelope) string {
 }
 
 func addMetric(e *loggregator_v2.Envelope, valueMetricMap map[string]float64, counterMetricMap map[string]float64, logger *gosteno.Logger) {
-	// switch e.GetEventType() {
-	// case events.Envelope_ValueMetric:
-	// 	valueMetric := e.GetValueMetric()
+	g := e.GetGauge()
+    if g != nil {
+    	for k, v := range g.Metrics {
+    		valueMetricMap[k] = v.GetValue()
+    		logger.Debugf("Adding Value Event Name %s, Value %d", k, v.GetValue())
+    	}
+    }
 
-	// 	valueMetricMap[valueMetric.GetName()] = valueMetric.GetValue()
-	// 	logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
-	// case events.Envelope_CounterEvent:
-	// 	counterEvent := envelope.GetCounterEvent()
-
-	// 	counterMetricMap[counterEvent.GetName()] = float64(counterEvent.GetTotal())
-	// 	logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
-	// case events.Envelope_ContainerMetric:
-	// 	// ignored message type
-	// case events.Envelope_LogMessage:
-	// 	// ignored message type
-	// case events.Envelope_HttpStartStop:
-	// 	// ignored message type
-	// case events.Envelope_Error:
-	// 	// ignored message type
-	// default:
-	// 	logger.Warnf("Unknown event type %s", e.GetEventType())
-	// }
+    c := e.GetCounter()
+    if c != nil {
+    	valueMetricMap[c.GetName()] = float64(c.GetTotal())
+    	logger.Debugf("Adding Counter Event Name %s, Value %d", c.GetName(), c.GetTotal())
+    }
 }
 
 func getValues(resourceMap map[string]*results.Resource) []*results.Resource {
