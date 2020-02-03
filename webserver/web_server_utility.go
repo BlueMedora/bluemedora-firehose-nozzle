@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 
     "github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
+	
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/sonde-go/events"
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 )
 
 const (
@@ -50,33 +51,33 @@ type Resource struct {
 	CounterMetrics map[string]float64
 }
 
-func createEnvelopeKey(envelope *events.Envelope) string {
-	return fmt.Sprintf("%s | %s | %s | %s", envelope.GetDeployment(), envelope.GetJob(), envelope.GetIndex(), envelope.GetIp())
+func createEnvelopeKey(e *loggregator_v2.Envelope) string {
+	return fmt.Sprintf("%s | %s | %s | %s", e.Tags["deployment"], e.Tags["job"], e.Tags["index"], e.Tags["ip"])
 }
 
-func addMetric(envelope *events.Envelope, valueMetricMap map[string]float64, counterMetricMap map[string]float64, logger *gosteno.Logger) {
-	switch envelope.GetEventType() {
-	case events.Envelope_ValueMetric:
-		valueMetric := envelope.GetValueMetric()
+func addMetric(e *loggregator_v2.Envelope, valueMetricMap map[string]float64, counterMetricMap map[string]float64, logger *gosteno.Logger) {
+	// switch e.GetEventType() {
+	// case events.Envelope_ValueMetric:
+	// 	valueMetric := e.GetValueMetric()
 
-		valueMetricMap[valueMetric.GetName()] = valueMetric.GetValue()
-		logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
-	case events.Envelope_CounterEvent:
-		counterEvent := envelope.GetCounterEvent()
+	// 	valueMetricMap[valueMetric.GetName()] = valueMetric.GetValue()
+	// 	logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
+	// case events.Envelope_CounterEvent:
+	// 	counterEvent := envelope.GetCounterEvent()
 
-		counterMetricMap[counterEvent.GetName()] = float64(counterEvent.GetTotal())
-		logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
-	case events.Envelope_ContainerMetric:
-		// ignored message type
-	case events.Envelope_LogMessage:
-		// ignored message type
-	case events.Envelope_HttpStartStop:
-		// ignored message type
-	case events.Envelope_Error:
-		// ignored message type
-	default:
-		logger.Warnf("Unknown event type %s", envelope.GetEventType())
-	}
+	// 	counterMetricMap[counterEvent.GetName()] = float64(counterEvent.GetTotal())
+	// 	logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
+	// case events.Envelope_ContainerMetric:
+	// 	// ignored message type
+	// case events.Envelope_LogMessage:
+	// 	// ignored message type
+	// case events.Envelope_HttpStartStop:
+	// 	// ignored message type
+	// case events.Envelope_Error:
+	// 	// ignored message type
+	// default:
+	// 	logger.Warnf("Unknown event type %s", e.GetEventType())
+	// }
 }
 
 func getValues(resourceMap map[string]*results.Resource) []*results.Resource {

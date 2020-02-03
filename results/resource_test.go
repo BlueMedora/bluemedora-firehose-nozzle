@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/sonde-go/events"
 )
 
 func TestCreateResource(t *testing.T) {

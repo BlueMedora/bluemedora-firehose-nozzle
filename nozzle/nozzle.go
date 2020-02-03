@@ -16,7 +16,6 @@ import (
 	"github.com/cloudfoundry-incubator/uaago"
 )
 
-//BlueMedoraFirehoseNozzle consuems data from fire hose and exposes it via REST
 type Nozzle struct {
 	config     Configuration
 	Messages   chan *loggregator_v2.Envelope
@@ -60,25 +59,21 @@ func New(config Configuration, logger *gosteno.Logger) *Nozzle {
 func (n *Nozzle) Start() {
 	n.logger.Info("Starting Blue Medora Firehose Nozzle")
 
-	// var authToken string
-	// if !nozzle.config.DisableAccessControl {
-	// 	authToken = nozzle.fetchUAAAuthToken()
-	// }
-	authToken := n.fetchUAAAuthToken()
+	var authToken string
+	if !n.config.DisableAccessControl {
+		authToken = n.fetchUAAAuthToken()
+	}
 
-	// nozzle.logger.Debugf("Using auth token <%s>", authToken)
+	n.logger.Debugf("Using auth token <%s>", authToken)
 
-    // Z - TODO this shouldn't happen here, instead this should be handled by the main.go
-    // main.go - n = bmfn.New
-    // main.go - n.Start()
-    // main.go - ws = ws.New(n.ttlcache)
-    // main.go - err := ws.Start()
-	// nozzle.serverErrs = nozzle.server.Start(webserver.DefaultKeyLocation, webserver.DefaultCertLocation)
-
-	// nozzle.collectFromFirehose(authToken)
     n.client = *loggregatorclient.New(n.config.UAAURL, n.config.SubscriptionID, authToken, n.logger)	
+    n.readMessages()    
     
-    go func(messages chan *loggregator_v2.Envelope, es loggregator.EnvelopeStream){
+	n.logger.Info("Closing Blue Medora Firehose Nozzle")
+}
+
+func (n *Nozzle) readMessages() {
+	go func(messages chan *loggregator_v2.Envelope, es loggregator.EnvelopeStream){
     	// go forever
     	for {
     		for _, envelope := range es() {
@@ -86,8 +81,6 @@ func (n *Nozzle) Start() {
     		}
     	}
     }(n.Messages, n.client.EnvelopeStream())
-
-	n.logger.Info("Closing Blue Medora Firehose Nozzle")
 }
 
 func (n *Nozzle) fetchUAAAuthToken() string {

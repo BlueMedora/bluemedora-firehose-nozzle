@@ -3,6 +3,7 @@ package results
 import (
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/cloudfoundry/gosteno"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
@@ -20,7 +21,7 @@ type Resource struct {
 }
 
 //CreateResource Creates a new resource
-func CreateResource(deployment, job, index, ip string) *Resource {
+func NewResource(deployment, job, index, ip string) *Resource {
 	return &Resource{
 		deployment:     deployment,
 		job:            job,
@@ -31,13 +32,35 @@ func CreateResource(deployment, job, index, ip string) *Resource {
 	}
 }
 
-//AddMetric adds a metric to a resource
-func (r *Resource) AddMetric(envelope *loggregator_v2.Envelope, logger *gosteno.Logger) {
-	// var metrics []*Metric
+func (r *Resource) AddMetric(e *loggregator_v2.Envelope, logger *gosteno.Logger, ttl time.Duration) {
+	
 
-	// timestamp := envelope.GetTimestamp()
+	timestamp := e.GetTimestamp()
     
-    
+    g := e.GetGauge()
+    if g != nil {
+    	r.mutext.Lock()
+        for k, v := range g.Metrics {
+        	r.valueMetrics[k] = append(r.valueMetrics[k], NewMetric(v.GetValue(), timestamp, ttl))
+        	logger.Debugf("Adding Value Event Name %s, Value %d", k, v.GetValue())    
+        }
+        r.mutext.Unlock()
+    	return
+    }
+
+    counter := e.GetCounter()
+    if counter != nil {
+      r.mutext.Lock()
+      cmetrics := r.getMetrics(r.counterMetrics, counter.GetName())
+      cmetric := NewMetric(float64(counter.GetTotal()), timestamp, ttl)
+      r.counterMetrics[counter.GetName()] = append(cmetrics, cmetric)
+      r.mutext.Unlock()
+    	return
+    }
+
+
+
+
 	// switch envelope.Type() {
 	// case loggregator_v2.Envelope_ValueMetric:
 	// 	valueMetric := envelope.GetValueMetric()
@@ -50,6 +73,25 @@ func (r *Resource) AddMetric(envelope *loggregator_v2.Envelope, logger *gosteno.
 	// 	r.valueMetrics[valueMetric.GetName()] = metrics
 	// 	r.mutext.Unlock()
 	// 	logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	// case loggregator_v2.Envelope_CounterEvent:
 	// 	counterEvent := envelope.GetCounterEvent()
 	// 	r.mutext.Lock()

@@ -25,13 +25,19 @@ func (m *Metric) getTimestamp() int64 {
 	return m.timestamp
 }
 
-func (m *Metric) update(newData float64, newTimestamp int64, duration time.Duration) {
+func NewMetric(d float64, t int64, ttl time.Duration) *Metric {
+	metric := &Metric{}
+	metric.update(d,t,ttl)
+	return metric
+}
+
+func (m *Metric) update(d float64, t int64, ttl time.Duration) {
 	m.Lock()
 	defer m.Unlock()
-	expiration := time.Now().Add(duration)
+	expiration := time.Now().Add(ttl)
 	m.expires = &expiration
-	m.data = newData
-	m.timestamp = newTimestamp
+	m.data = d
+	m.timestamp = t
 }
 
 func (m *Metric) expired() bool {
