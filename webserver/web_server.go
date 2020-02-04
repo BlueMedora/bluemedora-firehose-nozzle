@@ -8,21 +8,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"sync"
 
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webtoken"
 
 	"github.com/cloudfoundry/gosteno"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-
 )
 
 //Webserver Constants
 const (
-	DefaultCertLocation = "./certs/cert.pem"
-	DefaultKeyLocation  = "./certs/key.pem"
 	headerUsernameKey   = "username"
 	headerPasswordKey   = "password"
 	headerTokenKey      = "token"
@@ -33,7 +30,7 @@ type WebServer struct {
 	logger *gosteno.Logger
 	mutext sync.Mutex
 	config *Configuration
-	tokens map[string]*webtoken.Token //Maps token string to token object
+	tokens map[string]*Token //Maps token string to token object
 }
 
 type Configuration struct {
@@ -43,9 +40,11 @@ type Configuration struct {
 	MetricCacheDurationSeconds uint32
 	Port                       uint32
 	UseSSL                     bool
+	CertLocation               string
+	KeyLocation                string
 }
 
-func NewConfiguration(u string, p string, itimeout uint32, cacheDuration uint32, port uint32, useSSL bool) *Configuration {
+func NewConfiguration(u string, p string, itimeout uint32, cacheDuration uint32, port uint32, useSSL bool, certLocation string, keyLocation string) *Configuration {
 	return &Configuration{
 		UAAUsername: u,
 		UAAPassword: p,
@@ -53,6 +52,8 @@ func NewConfiguration(u string, p string, itimeout uint32, cacheDuration uint32,
 		MetricCacheDurationSeconds: cacheDuration,
 		Port: port,
 		UseSSL: useSSL,
+		CertLocation: certLocation,
+		KeyLocation: keyLocation,
 	}
 }
 
@@ -61,7 +62,7 @@ func New(c *Configuration, l *gosteno.Logger) *WebServer{
 	ws := &WebServer{
 		logger: l,
 		config: c,
-		tokens: make(map[string]*webtoken.Token),
+		tokens: make(map[string]*Token),
 	}
 
 	ws.logger.Info("Registering handlers")
@@ -103,7 +104,7 @@ func (ws *WebServer) Start() <-chan error {
 	go func() {
 		defer close(errors)
 		if ws.config.UseSSL {
-			errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", ws.config.Port), getAbsolutePath(DefaultCertLocation, ws.logger), getAbsolutePath(DefaultKeyLocation, ws.logger), nil)
+			errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", ws.config.Port), getAbsolutePath(ws.config.CertLocation, ws.logger), getAbsolutePath(ws.config.KeyLocation, ws.logger), nil)
 		} else {
 			errors <- http.ListenAndServe(fmt.Sprintf(":%v", ws.config.Port), nil)
 		}
@@ -112,10 +113,10 @@ func (ws *WebServer) Start() <-chan error {
 }
 
 //TokenTimeout is a callback for when a token timesout to remove
-func (ws *WebServer) TokenTimeout(token *webtoken.Token) {
+func (ws *WebServer) TokenTimeout(token *Token) {
 	ws.mutext.Lock()
-	ws.logger.Debugf("Removing token %s", token.TokenValue)
-	delete(ws.tokens, token.TokenValue)
+	ws.logger.Debugf("Removing token %s", token.Value)
+	delete(ws.tokens, token.Value)
 	ws.mutext.Unlock()
 }
 
@@ -139,16 +140,16 @@ func (ws *WebServer) tokenHandler(w http.ResponseWriter, r *http.Request) {
 				io.WriteString(w, "Invalid Username and/or Password")
 			} else {
 				//Successful login
-				token := webtoken.New(ws.TokenTimeout)
+				token := NewToken(ws.TokenTimeout)
 
 				ws.mutext.Lock()
-				ws.tokens[token.TokenValue] = token
+				ws.tokens[token.Value] = token
 				ws.mutext.Unlock()
 
-				w.Header().Set(headerTokenKey, token.TokenValue)
+				w.Header().Set(headerTokenKey, token.Value)
 				w.WriteHeader(http.StatusOK)
 
-				ws.logger.Debugf("Successful login generated token <%s>", token.TokenValue)
+				ws.logger.Debugf("Successful login generated token <%s>", token.Value)
 			}
 		}
 	} else {
@@ -283,10 +284,6 @@ func (ws *WebServer) locketsHandler(w http.ResponseWriter, r *http.Request) {
 	ws.processResourceRequest(locketOrigin, w, r)
 }
 
-/**Cache Logic**/
-func (ws *WebServer) CacheEnvelnope(e *loggregator_v2.Envelope){
-	ws.logger.Debug(e.SourceId)
-}
 //CacheEnvelope caches envelope by origin
 func (ws *WebServer) CacheEnvelope(e *loggregator_v2.Envelope) {
 	ws.mutext.Lock()
@@ -317,14 +314,15 @@ func (ws *WebServer) processResourceRequest(originType string, w http.ResponseWr
 
 		token := ws.tokens[tokenString]
 
-		if token == nil || !token.IsTokenValid() {
-			ws.logger.Debugf("Invalid token %s supplied", tokenString)
-			w.WriteHeader(http.StatusUnauthorized)
-			io.WriteString(w, fmt.Sprintf("Invalid token %s supplied", tokenString))
-		} else {
+		if token != nil && token.IsValid() {
 			ws.logger.Debugf("Valid token %s supplied", tokenString)
 			token.UseToken()
 			ws.sendOriginBytes(originType, w)
+		} else {
+			ws.logger.Debugf("Invalid token %s supplied", tokenString)
+			w.WriteHeader(http.StatusUnauthorized)
+			io.WriteString(w, fmt.Sprintf("Invalid token %s supplied", tokenString))
+			
 		}
 	} else {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -350,3 +348,58 @@ func (ws *WebServer) sendOriginBytes(originType string, w http.ResponseWriter) {
 		ws.logger.Errorf("Error while answering end point call for origin %s: %s", originType, err.Error())
 	}
 }
+
+const (
+	metronAgentOrigin       = "MetronAgent"
+	syslogDrainBinderOrigin = "syslog_drain_binder"
+	tpsWatcherOrigin        = "tps_watcher"
+	tpsListenerOrigin       = "tps_listener"
+	stagerOrigin            = "stager"
+	sshProxyOrigin          = "ssh-proxy"
+	senderOrigin            = "sender"
+	routeEmitterOrigin      = "route_emitter"
+	repOrigin               = "rep"
+	receptorOrigin          = "receptor"
+	nsyncListenerOrigin     = "nsync_listener"
+	nsyncBulkerOrigin       = "nsync_bulker"
+	gardenLinuxOrigin       = "garden-linux"
+	fileServerOrigin        = "file_server"
+	fetcherOrigin           = "fetcher"
+	convergerOrigin         = "converger"
+	ccUploaderOrigin        = "cc_uploader"
+	bbsOrigin               = "bbs"
+	auctioneerOrigin        = "auctioneer"
+	etcdOrigin              = "etcd"
+	dopplerServerOrigin     = "DopplerServer"
+	cloudControllerOrigin   = "cc"
+	trafficControllerOrigin = "LoggregatorTrafficController"
+	goRouterOrigin          = "gorouter"
+	locketOrigin            = "locket"
+)
+
+func createEnvelopeKey(e *loggregator_v2.Envelope) string {
+	return fmt.Sprintf("%s | %s | %s | %s", e.Tags["deployment"], e.Tags["job"], e.Tags["index"], e.Tags["ip"])
+}
+
+func getValues(resourceMap map[string]*results.Resource) []*results.Resource {
+	resources := make([]*results.Resource, 0, len(resourceMap))
+
+	for _, resource := range resourceMap {
+		resources = append(resources, resource)
+	}
+
+	return resources
+}
+
+func getAbsolutePath(file string, logger *gosteno.Logger) string {
+	logger.Infof("Finding absolute path to %s", file)
+	absolutePath, err := filepath.Abs(file)
+
+	if err != nil {
+		logger.Warnf("Error getting absolute path to $s using relative path due to %v", file)
+		return file
+	}
+
+	return absolutePath
+}
+

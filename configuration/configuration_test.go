@@ -35,6 +35,8 @@ const (
 	testMetricCacheDuration   = uint32(60)
 	testWebServerPort         = uint32(8081)
 	testWebServerUseSSL       = true
+	testWebServerCertLocation = "../certs/cert.pem"
+	testWebServerKeyLocation  = "../certs/key.pem" 
 
 	testEnvUAAURL                = "env_UAAURL"
 	testEnvUsername              = "env_username"
@@ -47,6 +49,7 @@ const (
 	testEnvMetricCacheDuration   = "90"
 	testEnvWebServerPort         = "9080"
 	testEnvWebServerUseSSL       = "true"
+
 )
 
 func TestConfigParsing(t *testing.T) {
@@ -62,7 +65,7 @@ func TestConfigParsing(t *testing.T) {
 	logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, nozzleLogLevel)
 
 	//Create new configuration
-	var config *NozzleConfiguration
+	var config *Configuration
 	config, err = New(configFile, logger)
 
 	if err != nil {
@@ -203,7 +206,7 @@ func TestEnvironmentVariables(t *testing.T) {
 	os.Setenv(webServerUseSSLENV, testEnvWebServerUseSSL)
 
 	//Create new configuration
-	var config *NozzleConfiguration
+	var config *Configuration
 	config, err = New(configFile, logger)
 
 	if err != nil {
@@ -328,12 +331,13 @@ func renameConfigFile(t *testing.T) error {
 func createGoodConfigFile(t *testing.T) error {
 	t.Log("Creating good config file...")
 
-	message := NozzleConfiguration{
+	message := Configuration{
 		testUAAURL, testUsername,
 		testPassword, testTrafficControllerURL, testSubscriptionID,
 		testDisableAccessControl, testInsecureSSLSkipVerify,
 		testIdleTimeout, testMetricCacheDuration,
-		testWebServerPort, testWebServerUseSSL}
+		testWebServerPort, testWebServerUseSSL,
+	    testWebServerCertLocation, testWebServerKeyLocation}
 
 	messageBytes, _ := json.Marshal(message)
 

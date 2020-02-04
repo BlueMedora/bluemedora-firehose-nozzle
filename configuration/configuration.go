@@ -40,6 +40,8 @@ type Configuration struct {
 	MetricCacheDurationSeconds uint32
 	WebServerPort              uint32
 	WebServerUseSSL            bool
+	WebServerCertLocation	   string
+	WebServerKeyLocation       string
 }
 
 //New NozzleConfiguration

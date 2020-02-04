@@ -27,14 +27,11 @@ type rlpGatewayHttpClient struct {
 	client       *http.Client
 }
 
-// "custom logger" for RLPGatewayClientLogger (:})
 type RLPLogger struct {
 	log *gosteno.Logger
 }
 
-// to impliment 'Log' and have messages passed to app logger
 func (l RLPLogger) Write(p []byte) (n int, err error) {
-	// Todo - no errors in processing are returned from envelopestream, but they are logged here.
 	l.log.Debugf("RLP client: " + string(p))
 	return len(p), nil
 }

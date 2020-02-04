@@ -11,10 +11,11 @@ import (
 	"time"
 
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/testhelpers"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
-	"github.com/cloudfoundry/sonde-go/events"
+
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 )
 
 const (
@@ -31,7 +32,7 @@ const (
 
 var (
 	server *WebServer
-	config *nozzleconfiguration.NozzleConfiguration
+	config *Configuration
 )
 
 func TestTokenEndpoint(t *testing.T) {
@@ -39,7 +40,7 @@ func TestTokenEndpoint(t *testing.T) {
 
 	t.Log("Setting up server environment...")
 	testhelpers.GenerateCertFiles()
-	errors := server.Start(testKeyLocation, testCertLocation)
+	errors := server.Start()
 
 	//Handle errors from server
 	go func() {
@@ -68,7 +69,7 @@ func TestNoTokenEndpointRequest(t *testing.T) {
 	client := createHTTPClient(t)
 
 	//No Token tests
-	noTokenEndPointTest(t, client, config.WebServerPort, server)
+	noTokenEndPointTest(t, client, config.Port, server)
 }
 
 func TestPutRequestToResourceEndpoint(t *testing.T) {
@@ -79,7 +80,7 @@ func TestPutRequestToResourceEndpoint(t *testing.T) {
 	client := createHTTPClient(t)
 
 	//Put request to resource endpoint test
-	resourcePutEndPointTest(t, client, config.WebServerPort)
+	resourcePutEndPointTest(t, client, config.Port)
 }
 
 func TestNoCacheDataEndpointRequest(t *testing.T) {
@@ -93,7 +94,7 @@ func TestNoCacheDataEndpointRequest(t *testing.T) {
 	token := getToken(t, client, config)
 
 	//Cleared cache test
-	noCachedDataTest(t, client, token, config.WebServerPort, server)
+	noCachedDataTest(t, client, token, config.Port, server)
 }
 
 func TestMetronAgentEndpoint(t *testing.T) {
@@ -106,7 +107,7 @@ func TestMetronAgentEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, metronAgentOrigin, "metron_agents", server)
+	endPointTest(t, client, token, config.Port, metronAgentOrigin, "metron_agents", server)
 }
 
 func TestSyslogDrainBinderEndpoint(t *testing.T) {
@@ -119,7 +120,7 @@ func TestSyslogDrainBinderEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, syslogDrainBinderOrigin, "syslog_drains", server)
+	endPointTest(t, client, token, config.Port, syslogDrainBinderOrigin, "syslog_drains", server)
 }
 
 func TestTPSWatcherEndpoint(t *testing.T) {
@@ -132,7 +133,7 @@ func TestTPSWatcherEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, tpsWatcherOrigin, "tps_watchers", server)
+	endPointTest(t, client, token, config.Port, tpsWatcherOrigin, "tps_watchers", server)
 }
 
 func TestTPSListenerEndpoint(t *testing.T) {
@@ -145,7 +146,7 @@ func TestTPSListenerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, tpsListenerOrigin, "tps_listeners", server)
+	endPointTest(t, client, token, config.Port, tpsListenerOrigin, "tps_listeners", server)
 }
 
 func TestStagerEndpoint(t *testing.T) {
@@ -158,7 +159,7 @@ func TestStagerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, stagerOrigin, "stagers", server)
+	endPointTest(t, client, token, config.Port, stagerOrigin, "stagers", server)
 }
 
 func TestSSHProxiesEndpoint(t *testing.T) {
@@ -171,7 +172,7 @@ func TestSSHProxiesEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, sshProxyOrigin, "ssh_proxies", server)
+	endPointTest(t, client, token, config.Port, sshProxyOrigin, "ssh_proxies", server)
 }
 
 func TestSenderEndpoint(t *testing.T) {
@@ -184,7 +185,7 @@ func TestSenderEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, senderOrigin, "senders", server)
+	endPointTest(t, client, token, config.Port, senderOrigin, "senders", server)
 }
 
 func TestRouteEmitterEndpoint(t *testing.T) {
@@ -197,7 +198,7 @@ func TestRouteEmitterEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, routeEmitterOrigin, "route_emitters", server)
+	endPointTest(t, client, token, config.Port, routeEmitterOrigin, "route_emitters", server)
 }
 
 func TestRepEndpoint(t *testing.T) {
@@ -210,7 +211,7 @@ func TestRepEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, repOrigin, "reps", server)
+	endPointTest(t, client, token, config.Port, repOrigin, "reps", server)
 }
 
 func TestReceptorEndpoint(t *testing.T) {
@@ -223,7 +224,7 @@ func TestReceptorEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, receptorOrigin, "receptors", server)
+	endPointTest(t, client, token, config.Port, receptorOrigin, "receptors", server)
 }
 
 func TestNSYNCListenerEndpoint(t *testing.T) {
@@ -236,7 +237,7 @@ func TestNSYNCListenerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, nsyncListenerOrigin, "nsync_listeners", server)
+	endPointTest(t, client, token, config.Port, nsyncListenerOrigin, "nsync_listeners", server)
 }
 
 func TestNSYNCBulkerEndpoint(t *testing.T) {
@@ -249,7 +250,7 @@ func TestNSYNCBulkerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, nsyncBulkerOrigin, "nsync_bulkers", server)
+	endPointTest(t, client, token, config.Port, nsyncBulkerOrigin, "nsync_bulkers", server)
 }
 
 func TestGardenLinuxEndpoint(t *testing.T) {
@@ -262,7 +263,7 @@ func TestGardenLinuxEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, gardenLinuxOrigin, "garden_linuxs", server)
+	endPointTest(t, client, token, config.Port, gardenLinuxOrigin, "garden_linuxs", server)
 }
 
 func TestFileServerEndpoint(t *testing.T) {
@@ -275,7 +276,7 @@ func TestFileServerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, fileServerOrigin, "file_servers", server)
+	endPointTest(t, client, token, config.Port, fileServerOrigin, "file_servers", server)
 }
 
 func TestFetcherEndpoint(t *testing.T) {
@@ -288,7 +289,7 @@ func TestFetcherEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, fetcherOrigin, "fetchers", server)
+	endPointTest(t, client, token, config.Port, fetcherOrigin, "fetchers", server)
 }
 
 func TestConvergerEndpoint(t *testing.T) {
@@ -301,7 +302,7 @@ func TestConvergerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, convergerOrigin, "convergers", server)
+	endPointTest(t, client, token, config.Port, convergerOrigin, "convergers", server)
 }
 
 func TestCCUploaderEndpoint(t *testing.T) {
@@ -314,7 +315,7 @@ func TestCCUploaderEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, ccUploaderOrigin, "cc_uploaders", server)
+	endPointTest(t, client, token, config.Port, ccUploaderOrigin, "cc_uploaders", server)
 }
 
 func TestbbsEndpoint(t *testing.T) {
@@ -327,7 +328,7 @@ func TestbbsEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, bbsOrigin, "bbs", server)
+	endPointTest(t, client, token, config.Port, bbsOrigin, "bbs", server)
 }
 
 func TestAuctioneerEndpoint(t *testing.T) {
@@ -340,7 +341,7 @@ func TestAuctioneerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, auctioneerOrigin, "auctioneers", server)
+	endPointTest(t, client, token, config.Port, auctioneerOrigin, "auctioneers", server)
 }
 
 func TestetcdEndpoint(t *testing.T) {
@@ -353,7 +354,7 @@ func TestetcdEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, etcdOrigin, "etcds", server)
+	endPointTest(t, client, token, config.Port, etcdOrigin, "etcds", server)
 }
 
 func TestDopplerServerEndpoint(t *testing.T) {
@@ -366,7 +367,7 @@ func TestDopplerServerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, dopplerServerOrigin, "doppler_servers", server)
+	endPointTest(t, client, token, config.Port, dopplerServerOrigin, "doppler_servers", server)
 }
 
 func TestCloudControllerEndpoint(t *testing.T) {
@@ -379,7 +380,7 @@ func TestCloudControllerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, cloudControllerOrigin, "cloud_controllers", server)
+	endPointTest(t, client, token, config.Port, cloudControllerOrigin, "cloud_controllers", server)
 }
 
 func TestTrafficControllerEndpoint(t *testing.T) {
@@ -392,7 +393,7 @@ func TestTrafficControllerEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, trafficControllerOrigin, "traffic_controllers", server)
+	endPointTest(t, client, token, config.Port, trafficControllerOrigin, "traffic_controllers", server)
 }
 
 func TestGoRouterEndpoint(t *testing.T) {
@@ -405,7 +406,7 @@ func TestGoRouterEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, goRouterOrigin, "gorouters", server)
+	endPointTest(t, client, token, config.Port, goRouterOrigin, "gorouters", server)
 }
 
 func TestLocketEndpoint(t *testing.T) {
@@ -418,7 +419,7 @@ func TestLocketEndpoint(t *testing.T) {
 	//Retrieve token for other endpoint test
 	token := getToken(t, client, config)
 
-	endPointTest(t, client, token, config.WebServerPort, locketOrigin, "lockets", server)
+	endPointTest(t, client, token, config.Port, locketOrigin, "lockets", server)
 }
 
 func TestTokenTimeout(t *testing.T) {
@@ -434,7 +435,7 @@ func TestTokenTimeout(t *testing.T) {
 	t.Log("Waiting 3 minutes to enusre token invalidates")
 	time.Sleep(time.Duration(3) * time.Minute)
 
-	request := createResourceRequest(t, token, config.WebServerPort, "gorouters")
+	request := createResourceRequest(t, token, config.Port, "gorouters")
 
 	t.Logf("Check if server response to invalid token usage... (expecting status code: %v)", http.StatusUnauthorized)
 	response, err := client.Do(request)
@@ -447,7 +448,7 @@ func TestTokenTimeout(t *testing.T) {
 }
 
 /** Tests **/
-func tokenEndPointTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
+func tokenEndPointTest(t *testing.T, client *http.Client, config *Configuration) {
 	t.Log("Running token request tests...")
 	badCredentialTokenTest(t, client, config)
 	noCredentialTokenTest(t, client, config)
@@ -456,8 +457,8 @@ func tokenEndPointTest(t *testing.T, client *http.Client, config *nozzleconfigur
 	t.Log("Finished token request tests")
 }
 
-func goodTokenRequestTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
-	tokenRequest := createTokenRequest("GET", config.UAAUsername, config.UAAPassword, config.WebServerPort, t)
+func goodTokenRequestTest(t *testing.T, client *http.Client, config *Configuration) {
+	tokenRequest := createTokenRequest("GET", config.UAAUsername, config.UAAPassword, config.Port, t)
 
 	t.Logf("Check if server responses to good token request... (expecting status code: %v)", http.StatusOK)
 	response, err := client.Do(tokenRequest)
@@ -470,8 +471,8 @@ func goodTokenRequestTest(t *testing.T, client *http.Client, config *nozzleconfi
 	}
 }
 
-func badCredentialTokenTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
-	tokenRequest := createTokenRequest("GET", "baduser", "badPass", config.WebServerPort, t)
+func badCredentialTokenTest(t *testing.T, client *http.Client, config *Configuration) {
+	tokenRequest := createTokenRequest("GET", "baduser", "badPass", config.Port, t)
 
 	t.Logf("Check if server responses to a bad credential token request... (expecting status code: %v)", http.StatusUnauthorized)
 	response, err := client.Do(tokenRequest)
@@ -484,8 +485,8 @@ func badCredentialTokenTest(t *testing.T, client *http.Client, config *nozzlecon
 	}
 }
 
-func noCredentialTokenTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
-	tokenRequest := createTokenRequest("GET", "", "", config.WebServerPort, t)
+func noCredentialTokenTest(t *testing.T, client *http.Client, config *Configuration) {
+	tokenRequest := createTokenRequest("GET", "", "", config.Port, t)
 
 	t.Logf("Check if server responses to a no credential token request... (expecting status code: %v)", http.StatusBadRequest)
 	response, err := client.Do(tokenRequest)
@@ -498,8 +499,8 @@ func noCredentialTokenTest(t *testing.T, client *http.Client, config *nozzleconf
 	}
 }
 
-func putTokenRequestTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
-	tokenRequest := createTokenRequest("PUT", config.UAAUsername, config.UAAPassword, config.WebServerPort, t)
+func putTokenRequestTest(t *testing.T, client *http.Client, config *Configuration) {
+	tokenRequest := createTokenRequest("PUT", config.UAAUsername, config.UAAPassword, config.Port, t)
 
 	t.Logf("Check if server responses to put token request... (expecting status code: %v)", http.StatusMethodNotAllowed)
 	response, err := client.Do(tokenRequest)
@@ -572,12 +573,22 @@ func noCachedDataTest(t *testing.T, client *http.Client, token string, port uint
 }
 
 /** Utility Functions **/
-func createWebServer(t *testing.T) (*WebServer, *nozzleconfiguration.NozzleConfiguration) {
+func createWebServer(t *testing.T) (*WebServer, *Configuration) {
 	t.Log("Creating webserver...")
 	logger.CreateLogDirectory(defaultLogDirectory)
 	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, webserverLogLevel)
 
-	config, err := nozzleconfiguration.New(defaultConfigLocation, logger)
+	c, err := configuration.New(defaultConfigLocation, logger)
+	wsc := NewConfiguration(
+		c.UAAUsername,
+		c.UAAPassword,
+		c.IdleTimeoutSeconds,
+		c.MetricCacheDurationSeconds,
+		c.WebServerPort,
+		c.WebServerUseSSL,
+		c.WebServerCertLocation,
+		c.WebServerKeyLocation,
+		)
 	if err != nil {
 		t.Fatalf("Error while loading configuration: %s", err.Error())
 	}
@@ -586,7 +597,7 @@ func createWebServer(t *testing.T) (*WebServer, *nozzleconfiguration.NozzleConfi
 	cache.TTL = time.Second
 
 	t.Log("Created webserver")
-	return New(config, logger), config
+	return New(wsc, logger), wsc
 }
 
 func createHTTPClient(t *testing.T) *http.Client {
@@ -615,9 +626,9 @@ func createTokenRequest(httpmethod string, username string, password string, por
 	return request
 }
 
-func getToken(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) string {
+func getToken(t *testing.T, client *http.Client, config *Configuration) string {
 	t.Log("Requesting token...")
-	tokenRequest := createTokenRequest("GET", config.UAAUsername, config.UAAPassword, config.WebServerPort, t)
+	tokenRequest := createTokenRequest("GET", config.UAAUsername, config.UAAPassword, config.Port, t)
 	response, err := client.Do(tokenRequest)
 
 	if err != nil {
@@ -644,29 +655,31 @@ func createResourceRequest(t *testing.T, token string, port uint32, endpoint str
 
 func cacheEnvelope(originType string, server *WebServer) {
 	deployment := "deployment"
-	eventType := events.Envelope_ValueMetric
 	job := "job"
 	index := "0"
 	ip := "127.0.0.1"
 	metricName := "metric"
-	value := float64(100)
-	unit := "unit"
+	// value := float64(100)
+	// unit := "unit"
 
-	valueMetric := events.ValueMetric{
-		Name:  &metricName,
-		Value: &value,
-		Unit:  &unit,
+	e := &loggregator_v2.Envelope{
+		SourceId: "sourceid",
+		InstanceId: "instanceid",
+		Tags: map[string]string{
+			"deployment": deployment, 
+			"job": job,
+			"index": index,
+			"ip": ip,
+			"origin": originType,
+		},
+		Message: &loggregator_v2.Envelope_Counter{
+			Counter: &loggregator_v2.Counter{
+				Name: metricName,
+				Delta: 10,
+				Total: 10000,
+			},
+		},
 	}
 
-	envelope := events.Envelope{
-		Origin:      &originType,
-		EventType:   &eventType,
-		Deployment:  &deployment,
-		Job:         &job,
-		Index:       &index,
-		Ip:          &ip,
-		ValueMetric: &valueMetric,
-	}
-
-	server.CacheEnvelope(&envelope)
+	server.CacheEnvelope(e)
 }

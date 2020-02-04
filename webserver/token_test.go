@@ -1,7 +1,7 @@
 // Copyright (c) 2016 Blue Medora, Inc. All rights reserved.
 // This file is subject to the terms and conditions defined in the included file 'LICENSE.txt'.
 
-package webtoken
+package webserver
 
 import (
 	"strings"
@@ -11,10 +11,10 @@ import (
 
 func TestTokenStringUniqueness(t *testing.T) {
 	t.Log("Generating first token string...")
-	tokenStringOne := GenerateTokenString()
+	tokenStringOne := generateTokenString()
 
 	t.Log("Generating second token string...")
-	tokenStringTwo := GenerateTokenString()
+	tokenStringTwo := generateTokenString()
 
 	t.Log("Checking that first and second token strings are not equal...")
 	if tokenStringOne == tokenStringTwo {
@@ -24,11 +24,11 @@ func TestTokenStringUniqueness(t *testing.T) {
 
 func TestToken(t *testing.T) {
 	t.Log("Creating token")
-	token := New(tokenTimeoutCallback)
+	token := NewToken(tokenTimeoutCallback)
 	t.Log("Token Created")
 
 	t.Log("Checking if token is initially valid... (expected value: true)")
-	if !token.IsTokenValid() {
+	if !token.IsValid() {
 		t.Fatalf("Expected is token valid of true, but received false")
 	}
 
@@ -42,7 +42,7 @@ func TestToken(t *testing.T) {
 	time.Sleep(time.Duration(3) * time.Minute)
 
 	t.Log("Checking if token is invalid after timeout... (expected value: false)")
-	if token.IsTokenValid() {
+	if token.IsValid() {
 		t.Fatalf("Expected is token valid of false, but received true")
 	}
 

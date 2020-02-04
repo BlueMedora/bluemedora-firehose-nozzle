@@ -16,8 +16,8 @@ type Resource struct {
 	job            string
 	index          string
 	ip             string
-	valueMetrics   map[string][]*Metric
-	counterMetrics map[string][]*Metric
+	ValueMetrics   map[string][]*Metric
+	CounterMetrics map[string][]*Metric
 }
 
 //CreateResource Creates a new resource
@@ -27,111 +27,43 @@ func NewResource(deployment, job, index, ip string) *Resource {
 		job:            job,
 		index:          index,
 		ip:             ip,
-		valueMetrics:   make(map[string][]*Metric),
-		counterMetrics: make(map[string][]*Metric),
+		ValueMetrics:   make(map[string][]*Metric),
+		CounterMetrics: make(map[string][]*Metric),
 	}
 }
 
-func (r *Resource) AddMetric(e *loggregator_v2.Envelope, logger *gosteno.Logger, ttl time.Duration) {
-	
-
-	timestamp := e.GetTimestamp()
+func (r *Resource) AddMetric(e *loggregator_v2.Envelope, l *gosteno.Logger, ttl time.Duration) {
+	t := e.GetTimestamp()
     
     g := e.GetGauge()
     if g != nil {
-    	r.mutext.Lock()
-        for k, v := range g.Metrics {
-        	r.valueMetrics[k] = append(r.valueMetrics[k], NewMetric(v.GetValue(), timestamp, ttl))
-        	logger.Debugf("Adding Value Event Name %s, Value %d", k, v.GetValue())    
-        }
-        r.mutext.Unlock()
-    	return
+    	r.addGaugeMetrics(g, l, t, ttl)
     }
 
-    counter := e.GetCounter()
-    if counter != nil {
-      r.mutext.Lock()
-      cmetrics := r.getMetrics(r.counterMetrics, counter.GetName())
-      cmetric := NewMetric(float64(counter.GetTotal()), timestamp, ttl)
-      r.counterMetrics[counter.GetName()] = append(cmetrics, cmetric)
-      r.mutext.Unlock()
-    	return
+    c := e.GetCounter()
+    if c != nil {
+    	r.addCounterMetric(c, l, t, ttl)
     }
-
-
-
-
-	// switch envelope.Type() {
-	// case loggregator_v2.Envelope_ValueMetric:
-	// 	valueMetric := envelope.GetValueMetric()
-	// 	r.mutext.Lock()
-
-	// 	metrics = r.getMetrics(r.valueMetrics, valueMetric.GetName())
-	// 	var metric = &Metric{}
-	// 	metric.update(valueMetric.GetValue(), timestamp, GetInstance().TTL)
-	// 	metrics = append(metrics, metric)
-	// 	r.valueMetrics[valueMetric.GetName()] = metrics
-	// 	r.mutext.Unlock()
-	// 	logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	// case loggregator_v2.Envelope_CounterEvent:
-	// 	counterEvent := envelope.GetCounterEvent()
-	// 	r.mutext.Lock()
-
-	// 	metrics = r.getMetrics(r.counterMetrics, counterEvent.GetName())
-	// 	var metric = &Metric{}
-	// 	metric.update(float64(counterEvent.GetTotal()), timestamp, GetInstance().TTL)
-	// 	metrics = append(metrics, metric)
-	// 	r.counterMetrics[counterEvent.GetName()] = metrics
-	// 	r.mutext.Unlock()
-	// 	logger.Debugf("Adding Counter Event Name %s, Value %d", counterEvent.GetName(), counterEvent.GetTotal())
-	// case loggregator_v2.Envelope_ContainerMetric:
-	// 	// ignored message type
-	// case loggregator_v2.Envelope_LogMessage:
-	// 	// ignored message type
-	// case loggregator_v2.Envelope_HttpStartStop:
-	// 	// ignored message type
-	// case loggregator_v2.Envelope_Error:
-	// 	// ignored message type
-	// default:
-	// 	logger.Warnf("Unknown event type %s", envelope.GetEventType())
-	// }
 }
 
-func parseGauge(e *loggregator_v2.Envelope_Gauge) *loggregator_v2.Envelope_Gauge {
-	if e != nil {
-		return e
-	}
-    return nil
+func (r *Resource) addCounterMetric ( c *loggregator_v2.Counter, l *gosteno.Logger, timestamp int64, ttl time.Duration) {
+	r.mutext.Lock()
+	defer r.mutext.Unlock()
+	r.CounterMetrics[c.GetName()] = append(
+		r.getMetrics(r.CounterMetrics, c.GetName()),
+		NewMetric(float64(c.GetTotal()), timestamp, ttl),
+	)
+	l.Debugf("Adding Value Event Name %s, Value %d", c.GetName(), c.GetTotal())    
+}
 
-	// valueMetric := envelope.GetValueMetric()
-	// 	r.mutext.Lock()
 
-	// 	metrics = r.getMetrics(r.valueMetrics, valueMetric.GetName())
-	// 	var metric = &Metric{}
-	// 	metric.update(valueMetric.GetValue(), timestamp, GetInstance().TTL)
-	// 	metrics = append(metrics, metric)
-	// 	r.valueMetrics[valueMetric.GetName()] = metrics
-	// 	r.mutext.Unlock()
-	// 	logger.Debugf("Adding Value Event Name %s, Value %d", valueMetric.GetName(), valueMetric.GetValue())
+func (r *Resource) addGaugeMetrics ( g *loggregator_v2.Gauge, l *gosteno.Logger, timestamp int64, ttl time.Duration) {
+	r.mutext.Lock()
+	defer r.mutext.Unlock()
+	for k, v := range g.Metrics {
+        r.ValueMetrics[k] = append(r.ValueMetrics[k], NewMetric(v.GetValue(), timestamp, ttl))
+        l.Debugf("Adding Value Event Name %s, Value %f", k, v.GetValue())    
+    }
 }
 
 
@@ -139,11 +71,11 @@ func (r *Resource) IsEmpty() bool {
 	r.mutext.RLock()
 	defer r.mutext.RUnlock()
 	count := 0
-	for _, metrics := range r.valueMetrics {
+	for _, metrics := range r.ValueMetrics {
 		count += len(metrics)
 	}
 	// count := len(r.valueMetrics)
-	for _, metrics := range r.counterMetrics {
+	for _, metrics := range r.CounterMetrics {
 		count += len(metrics)
 	}
 	return count == 0
@@ -153,19 +85,19 @@ func (r *Resource) Cleanup() {
 	r.mutext.Lock()
 	defer r.mutext.Unlock()
 
-	for key, metrics := range r.valueMetrics {
-		r.valueMetrics[key] = nonExpiredMetric(metrics)
+	for key, metrics := range r.ValueMetrics {
+		r.ValueMetrics[key] = nonExpiredMetric(metrics)
 	}
 
-	for key, metrics := range r.counterMetrics {
-		r.counterMetrics[key] = nonExpiredMetric(metrics)
+	for key, metrics := range r.CounterMetrics {
+		r.CounterMetrics[key] = nonExpiredMetric(metrics)
 	}
 }
 
 func nonExpiredMetric(metrics []*Metric) []*Metric {
 	var metricsToKeep []*Metric
 	for _, metric := range metrics {
-		if !metric.expired() {
+		if !metric.HasExpired() {
 			metricsToKeep = append(metricsToKeep, metric)
 		}
 	}
@@ -194,7 +126,7 @@ type metricsJSON struct {
 }
 
 func (r *Resource) MarshalJSON() ([]byte, error) {
-	valueMetrics, counterMetrics := convertMap(r.valueMetrics), convertMap(r.counterMetrics)
+	ValueMetrics, CounterMetrics := convertMap(r.ValueMetrics), convertMap(r.CounterMetrics)
 
 	return json.Marshal(&struct {
 		Deployment     string
@@ -208,8 +140,8 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		Job:            r.job,
 		Index:          r.index,
 		IP:             r.ip,
-		ValueMetrics:   valueMetrics,
-		CounterMetrics: counterMetrics,
+		ValueMetrics:   ValueMetrics,
+		CounterMetrics: CounterMetrics,
 	})
 }
 
@@ -219,7 +151,7 @@ func convertMap(inputMap map[string][]*Metric) map[string]metricsJSON {
 		var emptyList []metricJSON
 		var jsonMetrics = metricsJSON{Metrics: emptyList}
 		for _, metric := range metrics {
-			jsonMetrics.Metrics = append(jsonMetrics.Metrics, metricJSON{Value: metric.getData(), Timestamp: metric.getTimestamp()})
+			jsonMetrics.Metrics = append(jsonMetrics.Metrics, metricJSON{Value: metric.GetData(), Timestamp: metric.GetTimestamp()})
 		}
 		outputMap[key] = jsonMetrics
 	}

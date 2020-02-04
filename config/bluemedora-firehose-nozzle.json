@@ -9,5 +9,7 @@
     "IdleTimeoutSeconds": 60,
     "MetricCacheDurationSeconds": 300,
     "WebServerPort": 8081,
-    "WebServerUseSSL": true
+    "WebServerUseSSL": true,
+    "WebServerCertLocation": "../certs/cert.pem",
+    "WebServerKeyLocation": "../certs/key.pem"
 }

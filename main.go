@@ -61,6 +61,8 @@ func normalSetup() {
 		c.MetricCacheDurationSeconds,
 		c.WebServerPort,
 		c.WebServerUseSSL,
+		c.WebServerCertLocation,
+		c.WebServerKeyLocation,
 		)
 
 	ws := *webserver.New(wsc, wsl)
@@ -81,7 +83,7 @@ func normalSetup() {
 		select {
 		case envelope := <-n.Messages:
 			l.Debug("printing a thing")
-			ws.CacheEnvelnope(envelope)
+			ws.CacheEnvelope(envelope)
 		case err := <- wsErrs:
 			// I think this becomes a fatal
 			l.Fatalf("Error while running webserver: %s", err.Error())
@@ -93,18 +95,20 @@ func standUpWebServer() {
 	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
 
 	//Read in config
-	config, err := configuration.New(defaultConfigLocation, logger)
+	c, err := configuration.New(defaultConfigLocation, logger)
 	if err != nil {
 		logger.Fatalf("Error parsing config file: %s", err.Error())
 	}
 
 	wsc := webserver.NewConfiguration(
-		config.UAAUsername,
-		config.UAAPassword,
-		config.IdleTimeoutSeconds,
-		config.MetricCacheDurationSeconds,
-		config.WebServerPort,
-		config.WebServerUseSSL,
+		c.UAAUsername,
+		c.UAAPassword,
+		c.IdleTimeoutSeconds,
+		c.MetricCacheDurationSeconds,
+		c.WebServerPort,
+		c.WebServerUseSSL,
+		c.WebServerCertLocation,
+		c.WebServerKeyLocation,
 		)
 	server := webserver.New(wsc, logger)
 

@@ -3,6 +3,8 @@ package ttlcache
 import (
 	"testing"
 	"time"
+
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
 )
 
 func TestGetInstance(t *testing.T) {
@@ -24,7 +26,7 @@ func TestCreateTTLCache(t *testing.T) {
 		{
 			testName: "Normal Creation",
 			want: &TTLCache{
-				origins: make(map[string]map[string]*Resource),
+				origins: make(map[string]map[string]*results.Resource),
 			},
 		},
 	}
@@ -39,10 +41,10 @@ func TestCreateTTLCache(t *testing.T) {
 }
 
 func TestSetResource(t *testing.T) {
-	resource := &Resource{}
+	resource := &results.Resource{}
 	origin, key := "origin", "key"
 
-	cache := &TTLCache{origins: make(map[string]map[string]*Resource)}
+	cache := &TTLCache{origins: make(map[string]map[string]*results.Resource)}
 
 	cache.SetResource(origin, key, resource)
 
@@ -58,10 +60,10 @@ func TestSetResource(t *testing.T) {
 }
 
 func TestGetResource(t *testing.T) {
-	resource := &Resource{}
+	resource := &results.Resource{}
 	origin, key := "origin", "key"
 
-	cache := &TTLCache{origins: make(map[string]map[string]*Resource)}
+	cache := &TTLCache{origins: make(map[string]map[string]*results.Resource)}
 
 	//Testing with empty cache
 	if _, found := cache.GetResource(origin, key); found {
@@ -81,12 +83,12 @@ func TestGetResource(t *testing.T) {
 }
 
 func TestGetOrigin(t *testing.T) {
-	resource := &Resource{}
+	resource := &results.Resource{}
 	origin := "origin"
-	originMap := map[string]*Resource{
+	originMap := map[string]*results.Resource{
 		"key": resource,
 	}
-	cache := &TTLCache{origins: make(map[string]map[string]*Resource)}
+	cache := &TTLCache{origins: make(map[string]map[string]*results.Resource)}
 
 	//Test empty cache
 	if _, found := cache.GetOrigin(origin); found {
@@ -109,14 +111,20 @@ func TestGetOrigin(t *testing.T) {
 }
 
 func TestCacheCleanup(t *testing.T) {
-	expiration := time.Now().Add(time.Second)
+	expiration := time.Second * 1
 
 	cache := &TTLCache{
-		origins: make(map[string]map[string]*Resource),
+		origins: make(map[string]map[string]*results.Resource),
 	}
 
-	resource := createTestResource()
-	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &expiration}}
+	resource := newTestResource()
+	m1 := &results.Metric{}
+	m1.Update(2,2,expiration)
+	m2 := &results.Metric{}
+	m2.Update(4,4,expiration)
+	resource.ValueMetrics["test"] = append(resource.ValueMetrics["test"],  m1)
+	resource.ValueMetrics["test"] = append(resource.ValueMetrics["test"],  m2)
+
 
 	cache.SetResource("origin", "key", resource)
 
@@ -132,4 +140,9 @@ func TestCacheCleanup(t *testing.T) {
 	if len(cache.origins) != 0 {
 		t.Error("Failed to fully clean out cache after expiration")
 	}
+}
+
+func newTestResource() *results.Resource {
+	deployment, job, index, ip := "deployment", "job", "index", "ip"
+	return results.NewResource(deployment, job, index, ip)
 }
