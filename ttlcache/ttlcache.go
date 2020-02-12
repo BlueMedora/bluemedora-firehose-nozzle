@@ -5,17 +5,14 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
+
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"github.com/cloudfoundry/gosteno"
 )
 
 const (
 	cacheFlushSecond = 10
-	logDirectory     = "./logs"
-	logFile          = "bm_cache.log"
-	logName          = "bm_cache"
 )
 
 type TTLCache struct {
@@ -30,11 +27,16 @@ var once sync.Once
 
 //GetInstance retrieves the singleton cache
 func GetInstance() *TTLCache {
-	once.Do(func() {
-		instance = createTTLCache()
-	})
-
 	return instance
+}
+
+func CreateInstance(logger *gosteno.Logger) {
+	once.Do(func() {
+		if logger == nil {
+			panic("Cache initialized without logger")
+		}
+		instance = createTTLCache(logger)
+	})
 }
 
 // todo channel for storing messages and having time to update this without locking reading
@@ -129,10 +131,10 @@ func (cache *TTLCache) startCleanupTimer() {
 	})()
 }
 
-func createTTLCache() *TTLCache {
+func createTTLCache(logger *gosteno.Logger) *TTLCache {
 	cache := &TTLCache{
 		origins: make(map[string]map[string]*results.Resource),
-		logger:  logger.New(logDirectory, logFile, logName, "info"),
+		logger:  logger,
 	}
 	cache.logger.Info("Built Cache")
 

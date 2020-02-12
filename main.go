@@ -25,6 +25,9 @@ const (
 
 	webserverLogFile = "bm_server.log"
 	webserverLogName = "bm_server"
+
+	cacheLogFile = "bm_cache.log"
+	cacheLogName = "bm_cache"
 )
 
 var (
@@ -37,6 +40,9 @@ func main() {
 	flag.Parse()
 	logger.CreateLogDirectory(defaultLogDirectory)
 	l := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, *logLevel)
+
+	cacheLogger := logger.New(defaultLogDirectory, cacheLogFile, cacheLogName, *logLevel)
+	ttlcache.CreateInstance(cacheLogger)
 
 	//Read in config
 	c, err := configuration.New(defaultConfigLocation, l)

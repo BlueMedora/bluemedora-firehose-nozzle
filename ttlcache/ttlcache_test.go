@@ -4,8 +4,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
+
+	"github.com/cloudfoundry/gosteno"
 )
+
+const (
+	defaultLogDirectory = "../logs"
+	cacheLogFile        = "wslog.log"
+	cacheLogName        = "wslog"
+	cacheLogLevel       = "debug"
+)
+
+var cacheLogger *gosteno.Logger
+
+func GetTestLogger() *gosteno.Logger {
+	once.Do(func() {
+		logger.CreateLogDirectory(defaultLogDirectory)
+		cacheLogger = logger.New(defaultLogDirectory, cacheLogFile, cacheLogName, cacheLogLevel)
+	})
+
+	return cacheLogger
+}
 
 func TestGetInstance(t *testing.T) {
 	instancePointer := GetInstance()
@@ -27,12 +48,13 @@ func TestCreateTTLCache(t *testing.T) {
 			testName: "Normal Creation",
 			want: &TTLCache{
 				origins: make(map[string]map[string]*results.Resource),
+				logger:  GetTestLogger(),
 			},
 		},
 	}
 
 	for _, tc := range testCases {
-		createdCache := createTTLCache()
+		createdCache := createTTLCache(GetTestLogger())
 
 		if createdCache.TTL != tc.want.TTL || createdCache.origins == nil {
 			t.Errorf("Test Case %s returned %v expected %v", tc.testName, createdCache, tc.want)
@@ -44,9 +66,12 @@ func TestSetResource(t *testing.T) {
 	resource := &results.Resource{}
 	origin, key := "origin", "key"
 
-	cache := &TTLCache{origins: make(map[string]map[string]*results.Resource)}
+	cache := &TTLCache{
+		origins: make(map[string]map[string]*results.Resource),
+		logger:  GetTestLogger(),
+	}
 
-	cache.SetResource(origin, key, resource)
+	cache.setResource(origin, key, resource)
 
 	if originMap, ok := cache.origins[origin]; ok {
 		getResource := originMap[key]
@@ -63,7 +88,10 @@ func TestGetResource(t *testing.T) {
 	resource := &results.Resource{}
 	origin, key := "origin", "key"
 
-	cache := &TTLCache{origins: make(map[string]map[string]*results.Resource)}
+	cache := &TTLCache{
+		origins: make(map[string]map[string]*results.Resource),
+		logger:  GetTestLogger(),
+	}
 
 	//Testing with empty cache
 	if _, found := cache.GetResource(origin, key); found {
@@ -71,7 +99,7 @@ func TestGetResource(t *testing.T) {
 	}
 
 	//Add resource to cache
-	cache.SetResource(origin, key, resource)
+	cache.setResource(origin, key, resource)
 
 	if getResource, found := cache.GetResource(origin, key); found {
 		if getResource != resource {
@@ -88,7 +116,11 @@ func TestGetOrigin(t *testing.T) {
 	originMap := map[string]*results.Resource{
 		"key": resource,
 	}
-	cache := &TTLCache{origins: make(map[string]map[string]*results.Resource)}
+
+	cache := &TTLCache{
+		origins: make(map[string]map[string]*results.Resource),
+		logger:  GetTestLogger(),
+	}
 
 	//Test empty cache
 	if _, found := cache.GetOrigin(origin); found {
@@ -115,6 +147,7 @@ func TestCacheCleanup(t *testing.T) {
 
 	cache := &TTLCache{
 		origins: make(map[string]map[string]*results.Resource),
+		logger:  GetTestLogger(),
 	}
 
 	resource := newTestResource()
@@ -125,7 +158,7 @@ func TestCacheCleanup(t *testing.T) {
 	resource.ValueMetrics["test"] = append(resource.ValueMetrics["test"], m1)
 	resource.ValueMetrics["test"] = append(resource.ValueMetrics["test"], m2)
 
-	cache.SetResource("origin", "key", resource)
+	cache.setResource("origin", "key", resource)
 
 	cache.cleanup()
 
