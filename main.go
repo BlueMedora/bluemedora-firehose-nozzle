@@ -6,11 +6,11 @@ package main
 import (
 	"flag"
 
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzle"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webserver"
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"	
 
 	"github.com/cloudfoundry/gosteno"
 )
@@ -45,9 +45,9 @@ func main() {
 	}
 
 	if *runMode == "normal" {
-      normalSetup(c, l)
+		normalSetup(c, l)
 	} else {
-      webServerSetup(c)
+		webServerSetup(c)
 	}
 }
 
@@ -57,9 +57,9 @@ func normalSetup(config *configuration.Configuration, nozzleLogger *gosteno.Logg
 	ws := webserver.New(config, wsl)
 	wsErrs := ws.Start()
 
-    // Setup and start nozzle
-    n := *nozzle.New(config, nozzleLogger)
-    n.Start()
+	// Setup and start nozzle
+	n := *nozzle.New(config, nozzleLogger)
+	n.Start()
 
 	cache := ttlcache.GetInstance()
 	for {
@@ -70,7 +70,7 @@ func normalSetup(config *configuration.Configuration, nozzleLogger *gosteno.Logg
 			nozzleLogger.Fatalf("Error while running webserver: %s", err.Error())
 		}
 	}
-    return n
+	return n
 }
 
 func webServerSetup(config *configuration.Configuration) <-chan error {

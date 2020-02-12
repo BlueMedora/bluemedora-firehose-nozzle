@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+	"github.com/cloudfoundry/gosteno"
 )
 
 //Resource represents cloud controller data
@@ -34,38 +34,36 @@ func NewResource(deployment, job, index, ip string) *Resource {
 
 func (r *Resource) AddMetric(e *loggregator_v2.Envelope, l *gosteno.Logger, ttl time.Duration) {
 	t := e.GetTimestamp()
-    
-    g := e.GetGauge()
-    if g != nil {
-    	r.addGaugeMetrics(g, l, t, ttl)
-    }
 
-    c := e.GetCounter()
-    if c != nil {
-    	r.addCounterMetric(c, l, t, ttl)
-    }
+	g := e.GetGauge()
+	if g != nil {
+		r.addGaugeMetrics(g, l, t, ttl)
+	}
+
+	c := e.GetCounter()
+	if c != nil {
+		r.addCounterMetric(c, l, t, ttl)
+	}
 }
 
-func (r *Resource) addCounterMetric ( c *loggregator_v2.Counter, l *gosteno.Logger, timestamp int64, ttl time.Duration) {
+func (r *Resource) addCounterMetric(c *loggregator_v2.Counter, l *gosteno.Logger, timestamp int64, ttl time.Duration) {
 	r.mutext.Lock()
 	defer r.mutext.Unlock()
 	r.CounterMetrics[c.GetName()] = append(
 		r.getMetrics(r.CounterMetrics, c.GetName()),
 		NewMetric(float64(c.GetTotal()), timestamp, ttl),
 	)
-	l.Debugf("Adding Value Event Name %s, Value %d", c.GetName(), c.GetTotal())    
+	l.Debugf("Adding Value Event Name %s, Value %d", c.GetName(), c.GetTotal())
 }
 
-
-func (r *Resource) addGaugeMetrics ( g *loggregator_v2.Gauge, l *gosteno.Logger, timestamp int64, ttl time.Duration) {
+func (r *Resource) addGaugeMetrics(g *loggregator_v2.Gauge, l *gosteno.Logger, timestamp int64, ttl time.Duration) {
 	r.mutext.Lock()
 	defer r.mutext.Unlock()
 	for k, v := range g.Metrics {
-        r.ValueMetrics[k] = append(r.ValueMetrics[k], NewMetric(v.GetValue(), timestamp, ttl))
-        l.Debugf("Adding Value Event Name %s, Value %f", k, v.GetValue())    
-    }
+		r.ValueMetrics[k] = append(r.ValueMetrics[k], NewMetric(v.GetValue(), timestamp, ttl))
+		l.Debugf("Adding Value Event Name %s, Value %f", k, v.GetValue())
+	}
 }
-
 
 func (r *Resource) IsEmpty() bool {
 	r.mutext.RLock()

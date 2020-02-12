@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"	
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 
@@ -20,9 +20,9 @@ import (
 
 //Webserver Constants
 const (
-	headerUsernameKey   = "username"
-	headerPasswordKey   = "password"
-	headerTokenKey      = "token"
+	headerUsernameKey = "username"
+	headerPasswordKey = "password"
+	headerTokenKey    = "token"
 )
 
 //WebServer REST endpoint for sending data
@@ -34,7 +34,7 @@ type WebServer struct {
 }
 
 //New creates a new WebServer
-func New(c *configuration.Configuration, l *gosteno.Logger) *WebServer{
+func New(c *configuration.Configuration, l *gosteno.Logger) *WebServer {
 	ws := &WebServer{
 		logger: l,
 		config: c,
@@ -280,7 +280,7 @@ func (ws *WebServer) processResourceRequest(originType string, w http.ResponseWr
 			ws.logger.Debugf("Invalid token %s supplied", tokenString)
 			w.WriteHeader(http.StatusUnauthorized)
 			io.WriteString(w, fmt.Sprintf("Invalid token %s supplied", tokenString))
-			
+
 		}
 	} else {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -356,4 +356,3 @@ func getAbsolutePath(file string, logger *gosteno.Logger) string {
 
 	return absolutePath
 }
-

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/testhelpers"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 
@@ -588,7 +588,7 @@ func createWebServer(t *testing.T) (*WebServer, *Configuration) {
 		c.WebServerUseSSL,
 		c.WebServerCertLocation,
 		c.WebServerKeyLocation,
-		)
+	)
 	if err != nil {
 		t.Fatalf("Error while loading configuration: %s", err.Error())
 	}
@@ -663,18 +663,18 @@ func cacheEnvelope(originType string, server *WebServer) {
 	// unit := "unit"
 
 	e := &loggregator_v2.Envelope{
-		SourceId: "sourceid",
+		SourceId:   "sourceid",
 		InstanceId: "instanceid",
 		Tags: map[string]string{
-			"deployment": deployment, 
-			"job": job,
-			"index": index,
-			"ip": ip,
-			"origin": originType,
+			"deployment": deployment,
+			"job":        job,
+			"index":      index,
+			"ip":         ip,
+			"origin":     originType,
 		},
 		Message: &loggregator_v2.Envelope_Counter{
 			Counter: &loggregator_v2.Counter{
-				Name: metricName,
+				Name:  metricName,
 				Delta: 10,
 				Total: 10000,
 			},

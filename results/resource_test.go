@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+	"github.com/cloudfoundry/gosteno"
 )
 
 func TestCreateResource(t *testing.T) {
@@ -132,21 +132,21 @@ func TestAddMetric(t *testing.T) {
 	logger := createLogger()
 
 	gaugeEnvelope := &loggregator_v2.Envelope{
-		Timestamp: timestamp,
-		SourceId: "sourceid",
+		Timestamp:  timestamp,
+		SourceId:   "sourceid",
 		InstanceId: "instanceid",
 		Tags: map[string]string{
 			"deployment": deployment,
-			"job": job,
-			"index": index,
-			"ip": ip,
-			"origin": origin,
+			"job":        job,
+			"index":      index,
+			"ip":         ip,
+			"origin":     origin,
 		},
 		Message: &loggregator_v2.Envelope_Gauge{
 			Gauge: &loggregator_v2.Gauge{
 				Metrics: map[string]*loggregator_v2.GaugeValue{
 					metricName: &loggregator_v2.GaugeValue{
-						Unit: "ms",
+						Unit:  "ms",
 						Value: value,
 					},
 				},
@@ -155,19 +155,19 @@ func TestAddMetric(t *testing.T) {
 	}
 
 	counterEnvelope := &loggregator_v2.Envelope{
-		Timestamp: timestamp,
-		SourceId: "sourceid",
+		Timestamp:  timestamp,
+		SourceId:   "sourceid",
 		InstanceId: "instanceid",
 		Tags: map[string]string{
-			"deployment": deployment, 
-			"job": job,
-			"index": index,
-			"ip": ip,
-			"origin": origin,
+			"deployment": deployment,
+			"job":        job,
+			"index":      index,
+			"ip":         ip,
+			"origin":     origin,
 		},
 		Message: &loggregator_v2.Envelope_Counter{
 			Counter: &loggregator_v2.Counter{
-				Name: counterName,
+				Name:  counterName,
 				Delta: delta,
 				Total: total,
 			},

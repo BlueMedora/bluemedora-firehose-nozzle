@@ -6,11 +6,11 @@ package configuration
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
-	"github.com/cloudfoundry/gosteno"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 	metricCacheDurationSecondsEnv = "BM_METRIC_CACHE_DURATION_SECONDS"
 	webServerPortEnv              = "PORT"
 	webServerUseSSLENV            = "BM_WEBSERVER_USE_SSL"
-	webServerCertLocation		  = "BM_WEBSERVER_CERT_LOCATION"
+	webServerCertLocation         = "BM_WEBSERVER_CERT_LOCATION"
 	webServerKeyLocation          = "BM_WEBSERVER_KEY_LOCATION"
 )
 
@@ -42,7 +42,7 @@ type Configuration struct {
 	MetricCacheDurationSeconds uint32
 	WebServerPort              uint32
 	WebServerUseSSL            bool
-	WebServerCertLocation	   string
+	WebServerCertLocation      string
 	WebServerKeyLocation       string
 }
 

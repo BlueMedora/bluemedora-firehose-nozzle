@@ -27,7 +27,7 @@ func (m *Metric) GetTimestamp() int64 {
 
 func NewMetric(d float64, t int64, ttl time.Duration) *Metric {
 	metric := &Metric{}
-	metric.Update(d,t,ttl)
+	metric.Update(d, t, ttl)
 	return metric
 }
 

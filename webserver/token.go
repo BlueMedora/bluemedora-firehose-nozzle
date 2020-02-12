@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	tokenTimeout       = 60
+	tokenTimeout = 60
 )
 
 //TokenTimeout callback when a token times out
@@ -27,20 +27,20 @@ func (e *InvalidTokenError) Error() string {
 
 //Token token used for webserver communication
 type Token struct {
-	Value                    string
-	validToken               bool
+	Value               string
+	validToken          bool
 	usedSinceLastTimout bool
-	timoutTicker             *time.Ticker
-	mux                      sync.Mutex
+	timoutTicker        *time.Ticker
+	mux                 sync.Mutex
 }
 
 //New creates a new token
 func NewToken(callback TokenTimeout) *Token {
 	newToken := Token{
 		Value:               generateTokenString(),
-		validToken:               true,
+		validToken:          true,
 		usedSinceLastTimout: false,
-		timoutTicker:             time.NewTicker(time.Duration(tokenTimeout) * time.Second),
+		timoutTicker:        time.NewTicker(time.Duration(tokenTimeout) * time.Second),
 	}
 
 	go newToken.startTimeout(callback)
@@ -86,10 +86,10 @@ func (t *Token) UseToken() error {
 }
 
 func generateTokenString() string {
-	
+
 	tokenLength := 15
-	tokenRunes  := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
-    
+	tokenRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
+
 	tokenString := make([]rune, tokenLength)
 	for i := range tokenString {
 		tokenString[i] = tokenRunes[rand.Intn(len(tokenRunes))]

@@ -1,27 +1,27 @@
 package ttlcache
 
 import (
+	"fmt"
 	"sync"
 	"time"
-	"fmt"
 
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
+	"github.com/cloudfoundry/gosteno"
 )
 
 const (
 	cacheFlushSecond = 10
-	logDirectory = "./logs"
-	logFile = "bm_cache.log"
-	logName = "bm_cache"
+	logDirectory     = "./logs"
+	logFile          = "bm_cache.log"
+	logName          = "bm_cache"
 )
 
 type TTLCache struct {
 	mutext  sync.RWMutex
 	TTL     time.Duration
-	logger *gosteno.Logger
+	logger  *gosteno.Logger
 	origins map[string]map[string]*results.Resource
 }
 
@@ -38,7 +38,7 @@ func GetInstance() *TTLCache {
 }
 
 // todo channel for storing messages and having time to update this without locking reading
-func (cache *TTLCache) UpdateResource(e *loggregator_v2.Envelope){
+func (cache *TTLCache) UpdateResource(e *loggregator_v2.Envelope) {
 	cache.mutext.Lock()
 	defer cache.mutext.Unlock()
 
@@ -132,7 +132,7 @@ func (cache *TTLCache) startCleanupTimer() {
 func createTTLCache() *TTLCache {
 	cache := &TTLCache{
 		origins: make(map[string]map[string]*results.Resource),
-		logger: logger.New(logDirectory, logFile, logName, "info"),
+		logger:  logger.New(logDirectory, logFile, logName, "info"),
 	}
 	cache.logger.Info("Built Cache")
 

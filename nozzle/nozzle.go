@@ -7,38 +7,37 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
-    "net/http"
-    "time"
+	"net/http"
+	"time"
 
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"	
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"
 
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry-incubator/uaago"
 	"code.cloudfoundry.org/go-loggregator"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+	"github.com/cloudfoundry-incubator/uaago"
+	"github.com/cloudfoundry/gosteno"
 )
 
 type Nozzle struct {
-	client     *loggregator.RLPGatewayClient
-	config     *configuration.Configuration
-	logger     *gosteno.Logger
-	Messages   chan *loggregator_v2.Envelope
-	
+	client   *loggregator.RLPGatewayClient
+	config   *configuration.Configuration
+	logger   *gosteno.Logger
+	Messages chan *loggregator_v2.Envelope
 }
 
 func New(config *configuration.Configuration, logger *gosteno.Logger) *Nozzle {
 	l := log.New(NewRLPLogger(logger), "", log.LstdFlags)
 
 	c := loggregator.NewRLPGatewayClient(
-		config.TrafficControllerURL,									
+		config.TrafficControllerURL,
 		loggregator.WithRLPGatewayClientLogger(l),
 		loggregator.WithRLPGatewayHTTPClient(newNozzleHTTPClient(config, logger)),
 	)
 
 	return &Nozzle{
-		client: c,
-		config: config,
-		logger: logger,
+		client:   c,
+		config:   config,
+		logger:   logger,
 		Messages: make(chan *loggregator_v2.Envelope, 10000), //10k limit (evaluate)
 	}
 }
@@ -47,14 +46,14 @@ func New(config *configuration.Configuration, logger *gosteno.Logger) *Nozzle {
 func (n *Nozzle) Start() {
 	n.logger.Info("Starting Blue Medora Firehose Nozzle")
 
-    go func(nuz *Nozzle){
-		es :=nuz.envelopeStream()
-        for {
-    	  for _, e := range es() {
-    		nuz.Messages <- e
-    	  }
-    	}	
-    }(n)
+	go func(nuz *Nozzle) {
+		es := nuz.envelopeStream()
+		for {
+			for _, e := range es() {
+				nuz.Messages <- e
+			}
+		}
+	}(n)
 }
 
 func (n *Nozzle) envelopeStream() loggregator.EnvelopeStream {
@@ -83,7 +82,7 @@ type RLPLogger struct {
 	log *gosteno.Logger
 }
 
-func NewRLPLogger(logger *gosteno.Logger) (*RLPLogger) {
+func NewRLPLogger(logger *gosteno.Logger) *RLPLogger {
 	return &RLPLogger{
 		log: logger,
 	}
@@ -110,7 +109,7 @@ func newNozzleHTTPClient(config *configuration.Configuration, logger *gosteno.Lo
 		},
 	}
 
-	return &nozzleHTTPClient {
+	return &nozzleHTTPClient{
 		client: c,
 		config: config,
 		logger: logger,
@@ -139,7 +138,7 @@ func (c *nozzleHTTPClient) Do(req *http.Request) (*http.Response, error) {
 		c.token = c.fetchToken()
 	}
 
-    req.Header.Set("Authorization", c.token)
+	req.Header.Set("Authorization", c.token)
 
 	resp, err := c.client.Do(req)
 

@@ -36,7 +36,7 @@ const (
 	testWebServerPort         = uint32(8081)
 	testWebServerUseSSL       = true
 	testWebServerCertLocation = "../certs/cert.pem"
-	testWebServerKeyLocation  = "../certs/key.pem" 
+	testWebServerKeyLocation  = "../certs/key.pem"
 
 	testEnvUAAURL                = "env_UAAURL"
 	testEnvUsername              = "env_username"
@@ -49,7 +49,6 @@ const (
 	testEnvMetricCacheDuration   = "90"
 	testEnvWebServerPort         = "9080"
 	testEnvWebServerUseSSL       = "true"
-
 )
 
 func TestConfigParsing(t *testing.T) {
@@ -337,7 +336,7 @@ func createGoodConfigFile(t *testing.T) error {
 		testDisableAccessControl, testInsecureSSLSkipVerify,
 		testIdleTimeout, testMetricCacheDuration,
 		testWebServerPort, testWebServerUseSSL,
-	    testWebServerCertLocation, testWebServerKeyLocation}
+		testWebServerCertLocation, testWebServerKeyLocation}
 
 	messageBytes, _ := json.Marshal(message)
 

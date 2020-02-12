@@ -119,12 +119,11 @@ func TestCacheCleanup(t *testing.T) {
 
 	resource := newTestResource()
 	m1 := &results.Metric{}
-	m1.Update(2,2,expiration)
+	m1.Update(2, 2, expiration)
 	m2 := &results.Metric{}
-	m2.Update(4,4,expiration)
-	resource.ValueMetrics["test"] = append(resource.ValueMetrics["test"],  m1)
-	resource.ValueMetrics["test"] = append(resource.ValueMetrics["test"],  m2)
-
+	m2.Update(4, 4, expiration)
+	resource.ValueMetrics["test"] = append(resource.ValueMetrics["test"], m1)
+	resource.ValueMetrics["test"] = append(resource.ValueMetrics["test"], m2)
 
 	cache.SetResource("origin", "key", resource)
 
