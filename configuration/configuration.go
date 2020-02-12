@@ -25,6 +25,8 @@ const (
 	metricCacheDurationSecondsEnv = "BM_METRIC_CACHE_DURATION_SECONDS"
 	webServerPortEnv              = "PORT"
 	webServerUseSSLENV            = "BM_WEBSERVER_USE_SSL"
+	webServerCertLocation		  = "BM_WEBSERVER_CERT_LOCATION"
+	webServerKeyLocation          = "BM_WEBSERVER_KEY_LOCATION"
 )
 
 //NozzleConfiguration represents configuration file
@@ -71,6 +73,8 @@ func New(configPath string, logger *gosteno.Logger) (*Configuration, error) {
 	overrideWithEnvUint32(metricCacheDurationSecondsEnv, &config.MetricCacheDurationSeconds)
 	overrideWithEnvUint32(webServerPortEnv, &config.WebServerPort)
 	overrideWithEnvBool(webServerUseSSLENV, &config.WebServerUseSSL)
+	overrideWithEnvVar(webServerCertLocation, &config.WebServerCertLocation)
+	overrideWithEnvVar(webServerKeyLocation, &config.WebServerKeyLocation)
 
 	logger.Debug(fmt.Sprintf("Loaded configuration to UAAURL <%s>, UAA Username <%s>, Traffic Controller URL <%s>, Disable Access Control <%v>, Insecure SSL Skip Verify <%v>",
 		config.UAAURL, config.UAAUsername, config.TrafficControllerURL, config.DisableAccessControl, config.InsecureSSLSkipVerify))

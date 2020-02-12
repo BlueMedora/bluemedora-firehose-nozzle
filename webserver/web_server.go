@@ -43,32 +43,32 @@ func New(c *configuration.Configuration, l *gosteno.Logger) *WebServer{
 
 	ws.logger.Info("Registering handlers")
 	//setup http handlers
-	http.HandleFunc("/token", ws.tokenHandler)//√
+	http.HandleFunc("/token", ws.tokenHandler)
 	http.HandleFunc("/metron_agents", ws.metronAgentsHandler)
 	http.HandleFunc("/syslog_drains", ws.syslogDrainBindersHandler)
-	http.HandleFunc("/tps_watchers", ws.tpsWatcherHandler)//√
+	http.HandleFunc("/tps_watchers", ws.tpsWatcherHandler)
 	http.HandleFunc("/tps_listeners", ws.tpsListenersHandler)
 	http.HandleFunc("/stagers", ws.stagerHandler)
 	http.HandleFunc("/ssh_proxies", ws.sshProxyHandler)
 	http.HandleFunc("/senders", ws.senderHandler)
-	http.HandleFunc("/route_emitters", ws.routeEmitterHandler)//√
-	http.HandleFunc("/reps", ws.repHandler)//√
+	http.HandleFunc("/route_emitters", ws.routeEmitterHandler)
+	http.HandleFunc("/reps", ws.repHandler)
 	http.HandleFunc("/receptors", ws.receptorHandler)
 	http.HandleFunc("/nsync_listeners", ws.nsyncListenerHandler)
 	http.HandleFunc("/nsync_bulkers", ws.nsyncBulkerHandler)
 	http.HandleFunc("/garden_linuxs", ws.gardenLinuxHandler)
-	http.HandleFunc("/file_servers", ws.fileServersHandler)//√
+	http.HandleFunc("/file_servers", ws.fileServersHandler)
 	http.HandleFunc("/fetchers", ws.fetcherHandler)
 	http.HandleFunc("/convergers", ws.convergerHandler)
-	http.HandleFunc("/cc_uploaders", ws.ccUploaderHandler)//√
-	http.HandleFunc("/bbs", ws.bbsHandler)//√
-	http.HandleFunc("/auctioneers", ws.auctioneerHandler)//√
+	http.HandleFunc("/cc_uploaders", ws.ccUploaderHandler)
+	http.HandleFunc("/bbs", ws.bbsHandler)
+	http.HandleFunc("/auctioneers", ws.auctioneerHandler)
 	http.HandleFunc("/etcds", ws.etcdsHandler)
 	http.HandleFunc("/doppler_servers", ws.dopplerServersHandler)
-	http.HandleFunc("/cloud_controllers", ws.cloudControllersHandler)//√
+	http.HandleFunc("/cloud_controllers", ws.cloudControllersHandler)
 	http.HandleFunc("/traffic_controllers", ws.trafficControllersHandler)
-	http.HandleFunc("/gorouters", ws.gorouterHandler)//√
-	http.HandleFunc("/lockets", ws.locketsHandler)//√
+	http.HandleFunc("/gorouters", ws.gorouterHandler)
+	http.HandleFunc("/lockets", ws.locketsHandler)
 
 	return ws
 }

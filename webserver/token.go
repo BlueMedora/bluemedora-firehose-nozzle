@@ -7,15 +7,11 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-
 )
-
-
 
 const (
 	tokenTimeout       = 60
 )
-
 
 //TokenTimeout callback when a token times out
 type TokenTimeout func(token *Token)
