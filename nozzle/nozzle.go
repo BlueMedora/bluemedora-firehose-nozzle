@@ -4,54 +4,42 @@
 package nozzle
 
 import (
-	// "crypto/tls"
-	"fmt"
-	// "time"
+	"context"
+	"crypto/tls"
+	"log"
+    "net/http"
+    "time"
 
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/loggregatorclient"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"	
 
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry-incubator/uaago"
 	"code.cloudfoundry.org/go-loggregator"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
-	"github.com/cloudfoundry-incubator/uaago"
 )
 
 type Nozzle struct {
-	config     Configuration
-	Messages   chan *loggregator_v2.Envelope
+	client     *loggregator.RLPGatewayClient
+	config     *configuration.Configuration
 	logger     *gosteno.Logger
-	client     loggregatorclient.Client
+	Messages   chan *loggregator_v2.Envelope
+	
 }
 
-type Configuration struct {
-	UAAURL                     string
-	UAAUsername                string
-	UAAPassword                string
-	TrafficControllerURL       string
-	SubscriptionID             string
-	DisableAccessControl       bool
-	InsecureSSLSkipVerify      bool
-}
+func New(config *configuration.Configuration, logger *gosteno.Logger) *Nozzle {
+	l := log.New(NewRLPLogger(logger), "", log.LstdFlags)
 
-func NewConfiguration(uaaurl string, u string, p string, tcurl string, sub string, DisableAccessControl bool, skipVerify bool) *Configuration {
-	return &Configuration{
-		UAAURL: uaaurl,
-		UAAUsername: u,
-		UAAPassword: p,
-		TrafficControllerURL: tcurl,
-		SubscriptionID: sub,
-		DisableAccessControl: DisableAccessControl,
-		InsecureSSLSkipVerify: skipVerify,
-	}
-}
+	c := loggregator.NewRLPGatewayClient(
+		config.TrafficControllerURL,									
+		loggregator.WithRLPGatewayClientLogger(l),
+		loggregator.WithRLPGatewayHTTPClient(newNozzleHTTPClient(config, logger)),
+	)
 
-//New BlueMedoraFirhoseNozzle
-func New(config Configuration, logger *gosteno.Logger) *Nozzle {
 	return &Nozzle{
+		client: c,
 		config: config,
 		logger: logger,
 		Messages: make(chan *loggregator_v2.Envelope, 10000), //10k limit (evaluate)
-		// ATP I dont like messages and errs not being passed in when we create the firehose
 	}
 }
 
@@ -59,46 +47,108 @@ func New(config Configuration, logger *gosteno.Logger) *Nozzle {
 func (n *Nozzle) Start() {
 	n.logger.Info("Starting Blue Medora Firehose Nozzle")
 
-	var authToken string
-	if !n.config.DisableAccessControl {
-		authToken = n.fetchUAAAuthToken()
+    go func(nuz *Nozzle){
+		es :=nuz.envelopeStream()
+        for {
+    	  for _, e := range es() {
+    		nuz.Messages <- e
+    	  }
+    	}	
+    }(n)
+}
+
+func (n *Nozzle) envelopeStream() loggregator.EnvelopeStream {
+	ctx := context.Background()
+	return n.client.Stream(
+		ctx,
+		&loggregator_v2.EgressBatchRequest{
+			ShardId: n.config.SubscriptionID,
+			Selectors: []*loggregator_v2.Selector{
+				{
+					Message: &loggregator_v2.Selector_Counter{
+						Counter: &loggregator_v2.CounterSelector{},
+					},
+				},
+				{
+					Message: &loggregator_v2.Selector_Gauge{
+						Gauge: &loggregator_v2.GaugeSelector{},
+					},
+				},
+			},
+		},
+	)
+}
+
+type RLPLogger struct {
+	log *gosteno.Logger
+}
+
+func NewRLPLogger(logger *gosteno.Logger) (*RLPLogger) {
+	return &RLPLogger{
+		log: logger,
+	}
+}
+
+func (l RLPLogger) Write(p []byte) (n int, err error) {
+	l.log.Info("RLP client: " + string(p))
+	return len(p), nil
+}
+
+type nozzleHTTPClient struct {
+	client *http.Client
+	config *configuration.Configuration
+	logger *gosteno.Logger
+	token  string
+}
+
+func newNozzleHTTPClient(config *configuration.Configuration, logger *gosteno.Logger) *nozzleHTTPClient {
+	c := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: config.InsecureSSLSkipVerify,
+			},
+		},
 	}
 
-	n.logger.Debugf("Using auth token <%s>", authToken)
-
-    n.client = *loggregatorclient.New(n.config.UAAURL, n.config.SubscriptionID, authToken, n.logger)	
-    n.readMessages()    
-    
-	n.logger.Info("Closing Blue Medora Firehose Nozzle")
+	return &nozzleHTTPClient {
+		client: c,
+		config: config,
+		logger: logger,
+	}
 }
 
-func (n *Nozzle) readMessages() {
-	go func(messages chan *loggregator_v2.Envelope, es loggregator.EnvelopeStream){
-    	// go forever
-    	for {
-    		for _, envelope := range es() {
-    			messages <- envelope
-    		}
-    	}
-    }(n.Messages, n.client.EnvelopeStream())
-}
+func (c *nozzleHTTPClient) fetchToken() string {
+	c.logger.Debug("Fetching UAA authenticaiton token")
 
-func (n *Nozzle) fetchUAAAuthToken() string {
-	n.logger.Debug("Fetching UAA authenticaiton token")
+	authClient, uaaErr := uaago.NewClient(c.config.UAAURL)
+	if uaaErr != nil {
+		c.logger.Fatalf("Error creating UAA client: %s", uaaErr.Error())
+	}
 
-	UAAClient, err := uaago.NewClient(n.config.UAAURL)
+	t, err := authClient.GetAuthToken(c.config.UAAUsername, c.config.UAAPassword, c.config.InsecureSSLSkipVerify)
 	if err != nil {
-		n.logger.Fatalf("Error creating UAA client: %s", err.Error())
+		c.logger.Fatalf("Failed to get oauth token: %s.", err.Error())
 	}
 
-	var token string
-	token, err = UAAClient.GetAuthToken(n.config.UAAUsername, n.config.UAAPassword, n.config.InsecureSSLSkipVerify)
-	if err != nil {
-		n.logger.Fatalf("Failed to get oauth token: %s.", err.Error())
-	}
-
-	n.logger.Debug(fmt.Sprintf("Successfully fetched UAA authentication token <%s>", token))
-	return token
+	c.logger.Infof("Successfully fetched UAA authentication token <%s>", t)
+	return t
 }
 
+func (c *nozzleHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	if !c.config.DisableAccessControl && c.token == "" {
+		c.token = c.fetchToken()
+	}
 
+    req.Header.Set("Authorization", c.token)
+
+	resp, err := c.client.Do(req)
+
+	if c.config.DisableAccessControl == false && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
+		time.Sleep(10 * time.Millisecond)
+		c.token = c.fetchToken()
+		req.Header.Set("Authorization", c.token)
+		resp, err = c.client.Do(req)
+	}
+
+	return resp, err
+}

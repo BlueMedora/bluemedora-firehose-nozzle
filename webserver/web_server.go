@@ -11,11 +11,11 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"	
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/results"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 
 	"github.com/cloudfoundry/gosteno"
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 )
 
 //Webserver Constants
@@ -29,36 +29,12 @@ const (
 type WebServer struct {
 	logger *gosteno.Logger
 	mutext sync.Mutex
-	config *Configuration
+	config *configuration.Configuration
 	tokens map[string]*Token //Maps token string to token object
 }
 
-type Configuration struct {
-	UAAUsername				   string
-	UAAPassword				   string
-	IdleTimeoutSeconds         uint32
-	MetricCacheDurationSeconds uint32
-	Port                       uint32
-	UseSSL                     bool
-	CertLocation               string
-	KeyLocation                string
-}
-
-func NewConfiguration(u string, p string, itimeout uint32, cacheDuration uint32, port uint32, useSSL bool, certLocation string, keyLocation string) *Configuration {
-	return &Configuration{
-		UAAUsername: u,
-		UAAPassword: p,
-		IdleTimeoutSeconds: itimeout,
-		MetricCacheDurationSeconds: cacheDuration,
-		Port: port,
-		UseSSL: useSSL,
-		CertLocation: certLocation,
-		KeyLocation: keyLocation,
-	}
-}
-
 //New creates a new WebServer
-func New(c *Configuration, l *gosteno.Logger) *WebServer{
+func New(c *configuration.Configuration, l *gosteno.Logger) *WebServer{
 	ws := &WebServer{
 		logger: l,
 		config: c,
@@ -67,57 +43,60 @@ func New(c *Configuration, l *gosteno.Logger) *WebServer{
 
 	ws.logger.Info("Registering handlers")
 	//setup http handlers
-	http.HandleFunc("/token", ws.tokenHandler)
+	http.HandleFunc("/token", ws.tokenHandler)//√
 	http.HandleFunc("/metron_agents", ws.metronAgentsHandler)
 	http.HandleFunc("/syslog_drains", ws.syslogDrainBindersHandler)
-	http.HandleFunc("/tps_watchers", ws.tpsWatcherHandler)
+	http.HandleFunc("/tps_watchers", ws.tpsWatcherHandler)//√
 	http.HandleFunc("/tps_listeners", ws.tpsListenersHandler)
 	http.HandleFunc("/stagers", ws.stagerHandler)
 	http.HandleFunc("/ssh_proxies", ws.sshProxyHandler)
 	http.HandleFunc("/senders", ws.senderHandler)
-	http.HandleFunc("/route_emitters", ws.routeEmitterHandler)
-	http.HandleFunc("/reps", ws.repHandler)
+	http.HandleFunc("/route_emitters", ws.routeEmitterHandler)//√
+	http.HandleFunc("/reps", ws.repHandler)//√
 	http.HandleFunc("/receptors", ws.receptorHandler)
 	http.HandleFunc("/nsync_listeners", ws.nsyncListenerHandler)
 	http.HandleFunc("/nsync_bulkers", ws.nsyncBulkerHandler)
 	http.HandleFunc("/garden_linuxs", ws.gardenLinuxHandler)
-	http.HandleFunc("/file_servers", ws.fileServersHandler)
+	http.HandleFunc("/file_servers", ws.fileServersHandler)//√
 	http.HandleFunc("/fetchers", ws.fetcherHandler)
 	http.HandleFunc("/convergers", ws.convergerHandler)
-	http.HandleFunc("/cc_uploaders", ws.ccUploaderHandler)
-	http.HandleFunc("/bbs", ws.bbsHandler)
-	http.HandleFunc("/auctioneers", ws.auctioneerHandler)
+	http.HandleFunc("/cc_uploaders", ws.ccUploaderHandler)//√
+	http.HandleFunc("/bbs", ws.bbsHandler)//√
+	http.HandleFunc("/auctioneers", ws.auctioneerHandler)//√
 	http.HandleFunc("/etcds", ws.etcdsHandler)
 	http.HandleFunc("/doppler_servers", ws.dopplerServersHandler)
-	http.HandleFunc("/cloud_controllers", ws.cloudControllersHandler)
+	http.HandleFunc("/cloud_controllers", ws.cloudControllersHandler)//√
 	http.HandleFunc("/traffic_controllers", ws.trafficControllersHandler)
-	http.HandleFunc("/gorouters", ws.gorouterHandler)
-	http.HandleFunc("/lockets", ws.locketsHandler)
+	http.HandleFunc("/gorouters", ws.gorouterHandler)//√
+	http.HandleFunc("/lockets", ws.locketsHandler)//√
 
 	return ws
 }
 
 //Start starts webserver listening
 func (ws *WebServer) Start() <-chan error {
-	ws.logger.Infof("Start listening on port %v", ws.config.Port)
+	ws.logger.Infof("Start listening on port %v", ws.config.WebServerPort)
 	errors := make(chan error, 1)
 	go func() {
 		defer close(errors)
-		if ws.config.UseSSL {
-			errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", ws.config.Port), getAbsolutePath(ws.config.CertLocation, ws.logger), getAbsolutePath(ws.config.KeyLocation, ws.logger), nil)
+		if ws.config.WebServerUseSSL {
+			ws.logger.Info("using ssl")
+			errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", ws.config.WebServerPort), getAbsolutePath(ws.config.WebServerCertLocation, ws.logger), getAbsolutePath(ws.config.WebServerKeyLocation, ws.logger), nil)
 		} else {
-			errors <- http.ListenAndServe(fmt.Sprintf(":%v", ws.config.Port), nil)
+			ws.logger.Info("not using ssl")
+			errors <- http.ListenAndServe(fmt.Sprintf(":%v", ws.config.WebServerPort), nil)
 		}
 	}()
+	ws.logger.Info("time to leave!")
 	return errors
 }
 
 //TokenTimeout is a callback for when a token timesout to remove
 func (ws *WebServer) TokenTimeout(token *Token) {
 	ws.mutext.Lock()
+	defer ws.mutext.Unlock()
 	ws.logger.Debugf("Removing token %s", token.Value)
 	delete(ws.tokens, token.Value)
-	ws.mutext.Unlock()
 }
 
 /**Handlers**/
@@ -284,27 +263,6 @@ func (ws *WebServer) locketsHandler(w http.ResponseWriter, r *http.Request) {
 	ws.processResourceRequest(locketOrigin, w, r)
 }
 
-//CacheEnvelope caches envelope by origin
-func (ws *WebServer) CacheEnvelope(e *loggregator_v2.Envelope) {
-	ws.mutext.Lock()
-	defer ws.mutext.Unlock()
-
-	cache := ttlcache.GetInstance()
-
-	k := createEnvelopeKey(e)
-	ws.logger.Debugf("Caching envelope origin %s with key %s", e.Tags["origin"], k)
-
-	var r *results.Resource
-	if value, ok := cache.GetResource(e.Tags["origin"], k); ok {
-		r = value
-	} else {
-		r = results.NewResource(e.Tags["deployment"], e.Tags["job"], e.Tags["index"], e.Tags["ip"])
-		cache.SetResource(e.Tags["origin"], k, r)
-	}
-
-	r.AddMetric(e, ws.logger, cache.TTL)
-}
-
 func (ws *WebServer) processResourceRequest(originType string, w http.ResponseWriter, r *http.Request) {
 	ws.mutext.Lock()
 	defer ws.mutext.Unlock()
@@ -376,10 +334,6 @@ const (
 	goRouterOrigin          = "gorouter"
 	locketOrigin            = "locket"
 )
-
-func createEnvelopeKey(e *loggregator_v2.Envelope) string {
-	return fmt.Sprintf("%s | %s | %s | %s", e.Tags["deployment"], e.Tags["job"], e.Tags["index"], e.Tags["ip"])
-}
 
 func getValues(resourceMap map[string]*results.Resource) []*results.Resource {
 	resources := make([]*results.Resource, 0, len(resourceMap))
