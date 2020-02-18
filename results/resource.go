@@ -11,7 +11,7 @@ import (
 
 //Resource represents cloud controller data
 type Resource struct {
-	mutext         sync.RWMutex
+	sync.RWMutex
 	deployment     string
 	job            string
 	index          string
@@ -35,20 +35,18 @@ func NewResource(deployment, job, index, ip string) *Resource {
 func (r *Resource) AddMetric(e *loggregator_v2.Envelope, l *gosteno.Logger, ttl time.Duration) {
 	t := e.GetTimestamp()
 
-	g := e.GetGauge()
-	if g != nil {
+	if g := e.GetGauge(); g != nil {
 		r.addGaugeMetrics(g, l, t, ttl)
 	}
 
-	c := e.GetCounter()
-	if c != nil {
+	if c := e.GetCounter(); c != nil {
 		r.addCounterMetric(c, l, t, ttl)
 	}
 }
 
 func (r *Resource) addCounterMetric(c *loggregator_v2.Counter, l *gosteno.Logger, timestamp int64, ttl time.Duration) {
-	r.mutext.Lock()
-	defer r.mutext.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	r.CounterMetrics[c.GetName()] = append(
 		r.getMetrics(r.CounterMetrics, c.GetName()),
 		NewMetric(float64(c.GetTotal()), timestamp, ttl),
@@ -57,8 +55,8 @@ func (r *Resource) addCounterMetric(c *loggregator_v2.Counter, l *gosteno.Logger
 }
 
 func (r *Resource) addGaugeMetrics(g *loggregator_v2.Gauge, l *gosteno.Logger, timestamp int64, ttl time.Duration) {
-	r.mutext.Lock()
-	defer r.mutext.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	for k, v := range g.Metrics {
 		r.ValueMetrics[k] = append(r.ValueMetrics[k], NewMetric(v.GetValue(), timestamp, ttl))
 		l.Debugf("Adding Value Event Name %s, Value %f", k, v.GetValue())
@@ -66,8 +64,8 @@ func (r *Resource) addGaugeMetrics(g *loggregator_v2.Gauge, l *gosteno.Logger, t
 }
 
 func (r *Resource) IsEmpty() bool {
-	r.mutext.RLock()
-	defer r.mutext.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	count := 0
 	for _, metrics := range r.ValueMetrics {
 		count += len(metrics)
@@ -80,8 +78,8 @@ func (r *Resource) IsEmpty() bool {
 }
 
 func (r *Resource) Cleanup() {
-	r.mutext.Lock()
-	defer r.mutext.Unlock()
+	r.Lock()
+	defer r.Unlock()
 
 	for key, metrics := range r.ValueMetrics {
 		r.ValueMetrics[key] = nonExpiredMetric(metrics)

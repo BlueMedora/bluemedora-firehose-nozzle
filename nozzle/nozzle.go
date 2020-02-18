@@ -38,22 +38,22 @@ func New(config *configuration.Configuration, logger *gosteno.Logger) *Nozzle {
 		client:   c,
 		config:   config,
 		logger:   logger,
-		Messages: make(chan *loggregator_v2.Envelope, 10000), //10k limit (evaluate)
+		Messages: make(chan *loggregator_v2.Envelope, 10000), //max 10k unprocessed envelopes. This is a reasonable limit we should be able to keep up with.
 	}
 }
 
-//Start starts consuming events from firehose
+// Start starts consuming events from firehose
 func (n *Nozzle) Start() {
 	n.logger.Info("Starting Blue Medora Firehose Nozzle")
 
-	go func(nuz *Nozzle) {
-		es := nuz.envelopeStream()
+	go func() {
+		es := n.envelopeStream()
 		for {
 			for _, e := range es() {
-				nuz.Messages <- e
+				n.Messages <- e
 			}
 		}
-	}(n)
+	}()
 }
 
 func (n *Nozzle) envelopeStream() loggregator.EnvelopeStream {
@@ -129,7 +129,7 @@ func (c *nozzleHTTPClient) fetchToken() string {
 		c.logger.Fatalf("Failed to get oauth token: %s.", err.Error())
 	}
 
-	c.logger.Infof("Successfully fetched UAA authentication token <%s>", t)
+	c.logger.Debugf("Successfully fetched UAA authentication token <%s>", t)
 	return t
 }
 
@@ -139,11 +139,10 @@ func (c *nozzleHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	req.Header.Set("Authorization", c.token)
-
 	resp, err := c.client.Do(req)
 
-	if c.config.DisableAccessControl == false && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
-		time.Sleep(10 * time.Millisecond)
+	if !c.config.DisableAccessControl && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
+		time.Sleep(10 * time.Millisecond) // todo figure out why
 		c.token = c.fetchToken()
 		req.Header.Set("Authorization", c.token)
 		resp, err = c.client.Do(req)

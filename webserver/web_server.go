@@ -27,8 +27,8 @@ const (
 
 //WebServer REST endpoint for sending data
 type WebServer struct {
+	sync.Mutex
 	logger *gosteno.Logger
-	mutext sync.Mutex
 	config *configuration.Configuration
 	tokens map[string]*Token //Maps token string to token object
 }
@@ -73,28 +73,23 @@ func New(c *configuration.Configuration, l *gosteno.Logger) *WebServer {
 	return ws
 }
 
-//Start starts webserver listening
 func (ws *WebServer) Start() <-chan error {
 	ws.logger.Infof("Start listening on port %v", ws.config.WebServerPort)
 	errors := make(chan error, 1)
 	go func() {
 		defer close(errors)
 		if ws.config.WebServerUseSSL {
-			ws.logger.Info("using ssl")
 			errors <- http.ListenAndServeTLS(fmt.Sprintf(":%v", ws.config.WebServerPort), getAbsolutePath(ws.config.WebServerCertLocation, ws.logger), getAbsolutePath(ws.config.WebServerKeyLocation, ws.logger), nil)
 		} else {
-			ws.logger.Info("not using ssl")
 			errors <- http.ListenAndServe(fmt.Sprintf(":%v", ws.config.WebServerPort), nil)
 		}
 	}()
-	ws.logger.Info("time to leave!")
 	return errors
 }
 
-//TokenTimeout is a callback for when a token timesout to remove
 func (ws *WebServer) TokenTimeout(token *Token) {
-	ws.mutext.Lock()
-	defer ws.mutext.Unlock()
+	ws.Lock()
+	defer ws.Unlock()
 	ws.logger.Debugf("Removing token %s", token.Value)
 	delete(ws.tokens, token.Value)
 }
@@ -121,9 +116,9 @@ func (ws *WebServer) tokenHandler(w http.ResponseWriter, r *http.Request) {
 				//Successful login
 				token := NewToken(ws.TokenTimeout)
 
-				ws.mutext.Lock()
+				ws.Lock()
 				ws.tokens[token.Value] = token
-				ws.mutext.Unlock()
+				ws.Unlock()
 
 				w.Header().Set(headerTokenKey, token.Value)
 				w.WriteHeader(http.StatusOK)
@@ -140,7 +135,6 @@ func (ws *WebServer) tokenHandler(w http.ResponseWriter, r *http.Request) {
 func (ws *WebServer) metronAgentsHandler(w http.ResponseWriter, r *http.Request) {
 	ws.logger.Info("Received /metron_agents request")
 	ws.processResourceRequest(metronAgentOrigin, w, r)
-
 }
 
 func (ws *WebServer) syslogDrainBindersHandler(w http.ResponseWriter, r *http.Request) {
@@ -264,8 +258,8 @@ func (ws *WebServer) locketsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ws *WebServer) processResourceRequest(originType string, w http.ResponseWriter, r *http.Request) {
-	ws.mutext.Lock()
-	defer ws.mutext.Unlock()
+	ws.Lock()
+	defer ws.Unlock()
 
 	if r.Method == "GET" {
 		tokenString := r.Header.Get(headerTokenKey)
@@ -297,7 +291,6 @@ func (ws *WebServer) sendOriginBytes(originType string, w http.ResponseWriter) {
 	} else {
 		w.WriteHeader(http.StatusNoContent)
 		messageBytes = []byte("{}")
-
 	}
 
 	_, err := w.Write(messageBytes)

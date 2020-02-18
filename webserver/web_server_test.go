@@ -652,8 +652,6 @@ func cacheEnvelope(originType string, server *WebServer) {
 	index := "0"
 	ip := "127.0.0.1"
 	metricName := "metric"
-	// value := float64(100)
-	// unit := "unit"
 
 	e := &loggregator_v2.Envelope{
 		SourceId:   "sourceid",

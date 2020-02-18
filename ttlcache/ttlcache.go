@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	cacheFlushSecond = 10
+	cacheFlushInterval = 10 * time.Second
 )
 
 type TTLCache struct {
-	mutext  sync.RWMutex
+	sync.RWMutex
 	TTL     time.Duration
 	logger  *gosteno.Logger
 	origins map[string]map[string]*results.Resource
@@ -40,68 +40,68 @@ func CreateInstance(logger *gosteno.Logger) {
 }
 
 // todo channel for storing messages and having time to update this without locking reading
-func (cache *TTLCache) UpdateResource(e *loggregator_v2.Envelope) {
-	cache.mutext.Lock()
-	defer cache.mutext.Unlock()
+func (c *TTLCache) UpdateResource(e *loggregator_v2.Envelope) {
+	c.Lock()
+	defer c.Unlock()
 
 	k := createEnvelopeKey(e)
 	var r *results.Resource
-	if value, ok := cache.getResource(e.Tags["origin"], k); ok {
+	if value, ok := c.getResource(e.Tags["origin"], k); ok {
 		r = value
 	} else {
 		r = results.NewResource(e.Tags["deployment"], e.Tags["job"], e.Tags["index"], e.Tags["ip"])
-		cache.setResource(e.Tags["origin"], k, r)
+		c.setResource(e.Tags["origin"], k, r)
 	}
 
-	r.AddMetric(e, cache.logger, cache.TTL)
+	r.AddMetric(e, c.logger, c.TTL)
 }
 
 func createEnvelopeKey(e *loggregator_v2.Envelope) string {
 	return fmt.Sprintf("%s | %s | %s | %s", e.Tags["deployment"], e.Tags["job"], e.Tags["index"], e.Tags["ip"])
 }
 
-// private utility func, public methods using it are expected to have mutext lock
-func (cache *TTLCache) setResource(originKey, key string, resource *results.Resource) {
+// private utility func, public methods using it are expected to have mutex lock
+func (c *TTLCache) setResource(originKey, key string, resource *results.Resource) {
 	var origin map[string]*results.Resource
-	if value, ok := cache.origins[originKey]; ok {
+	if value, ok := c.origins[originKey]; ok {
 		origin = value
 	} else {
 		origin = make(map[string]*results.Resource)
-		cache.origins[originKey] = origin
+		c.origins[originKey] = origin
 	}
 
 	origin[key] = resource
 }
 
-func (cache *TTLCache) GetResource(originKey, key string) (resource *results.Resource, found bool) {
-	cache.mutext.RLock()
-	defer cache.mutext.RUnlock()
-	return cache.getResource(originKey, key)
+func (c *TTLCache) GetResource(originKey, key string) (resource *results.Resource, found bool) {
+	c.RLock()
+	defer c.RUnlock()
+	return c.getResource(originKey, key)
 }
 
 // private utility func, public methods using it are expected to have mutext RLock minimum
-func (cache *TTLCache) getResource(originKey, key string) (resource *results.Resource, found bool) {
-	if origin, exists := cache.origins[originKey]; exists {
+func (c *TTLCache) getResource(originKey, key string) (resource *results.Resource, found bool) {
+	if origin, exists := c.origins[originKey]; exists {
 		resource, found = origin[key]
 	}
 	return resource, found
 }
 
-func (cache *TTLCache) GetOrigin(originKey string) (origin map[string]*results.Resource, found bool) {
-	cache.logger.Info("Get Origin")
-	cache.mutext.RLock()
-	defer cache.mutext.RUnlock()
+func (c *TTLCache) GetOrigin(originKey string) (origin map[string]*results.Resource, found bool) {
+	c.logger.Info("Get Origin")
+	c.RLock()
+	defer c.RUnlock()
 
-	origin, found = cache.origins[originKey]
-	cache.logger.Info("Returning from origin")
+	origin, found = c.origins[originKey]
+	c.logger.Info("Returning from origin")
 	return origin, found
 }
 
-func (cache *TTLCache) cleanup() {
-	cache.mutext.Lock()
-	defer cache.mutext.Unlock()
+func (c *TTLCache) cleanup() {
+	c.Lock()
+	defer c.Unlock()
 
-	for originKey, origin := range cache.origins {
+	for originKey, origin := range c.origins {
 		for key, resource := range origin {
 			resource.Cleanup()
 			if resource.IsEmpty() {
@@ -110,13 +110,13 @@ func (cache *TTLCache) cleanup() {
 		}
 
 		if len(origin) == 0 {
-			delete(cache.origins, originKey)
+			delete(c.origins, originKey)
 		}
 	}
 }
 
-func (cache *TTLCache) startCleanupTimer() {
-	duration := time.Duration(cacheFlushSecond) * time.Second
+func (c *TTLCache) startCleanupTimer() {
+	duration := time.Duration(cacheFlushInterval)
 	if duration < time.Second {
 		duration = time.Second
 	}
@@ -125,19 +125,19 @@ func (cache *TTLCache) startCleanupTimer() {
 		for {
 			select {
 			case <-ticker:
-				cache.cleanup()
+				c.cleanup()
 			}
 		}
 	})()
 }
 
 func createTTLCache(logger *gosteno.Logger) *TTLCache {
-	cache := &TTLCache{
+	c := &TTLCache{
 		origins: make(map[string]map[string]*results.Resource),
 		logger:  logger,
 	}
-	cache.logger.Info("Built Cache")
+	c.logger.Info("Built Cache")
 
-	cache.startCleanupTimer()
-	return cache
+	c.startCleanupTimer()
+	return c
 }
