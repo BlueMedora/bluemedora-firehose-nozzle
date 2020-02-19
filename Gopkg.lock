@@ -29,7 +29,6 @@
   revision = "236a6d29298aea12f69978f33393d12465abc429"
 
 [[projects]]
-  branch = "master"
   digest = "1:748e0542f42470c57952bca598d750ea1b77fbc479425902c3ad9f11f2911685"
   name = "github.com/cloudfoundry-incubator/uaago"
   packages = ["."]
@@ -37,7 +36,6 @@
   revision = "8136b7bbe76e26394600a790a95c15eac955f4fc"
 
 [[projects]]
-  branch = "master"
   digest = "1:c8f2d199ba88d6f95adfea6486e64df5a5f37c68f2951b3e08893d415366f763"
   name = "github.com/cloudfoundry/gosteno"
   packages = [
@@ -46,26 +44,6 @@
   ]
   pruneopts = "UT"
   revision = "0c8581caea35ac903728230e447792e2365dcc34"
-
-[[projects]]
-  branch = "master"
-  digest = "1:e40a214426e6825d5c4067ebbb788c06be08ef657918e45a8f7fc45685431098"
-  name = "github.com/cloudfoundry/sonde-go"
-  packages = ["events"]
-  pruneopts = "UT"
-  revision = "b33733203bb48d7c56de7cb639d77f78b0449d19"
-
-[[projects]]
-  digest = "1:e20a9d6598878d629e04541d96076bf232c1ee36f6b267c4a5dae7779f15c36a"
-  name = "github.com/gogo/protobuf"
-  packages = [
-    "gogoproto",
-    "proto",
-    "protoc-gen-gogo/descriptor",
-  ]
-  pruneopts = "UT"
-  revision = "5628607bb4c51c3157aacc3a50f0ab707582b805"
-  version = "v1.3.1"
 
 [[projects]]
   digest = "1:549b3770feea703d7cf55822b7b2e1b1afce35ea5034d9a1388249f3c65fbb98"
@@ -82,19 +60,6 @@
   pruneopts = "UT"
   revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
   version = "v1.3.2"
-
-[[projects]]
-  digest = "1:891f9c13236eb1b6d1abd4fe01e6c9be51bcc65f04da0dfa4bfdf356374e98c4"
-  name = "github.com/mailru/easyjson"
-  packages = [
-    ".",
-    "buffer",
-    "jlexer",
-    "jwriter",
-  ]
-  pruneopts = "UT"
-  revision = "1b2b06f5f209fea48ff5922d8bfb2b9ed5d8f00b"
-  version = "v0.7.0"
 
 [[projects]]
   branch = "master"
@@ -206,7 +171,6 @@
     "code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2",
     "github.com/cloudfoundry-incubator/uaago",
     "github.com/cloudfoundry/gosteno",
-    "github.com/cloudfoundry/sonde-go/events",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

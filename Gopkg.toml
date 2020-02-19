@@ -30,16 +30,12 @@
   version = "7.7.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/cloudfoundry-incubator/uaago"
+  revision = "8136b7bbe76e26394600a790a95c15eac955f4fc"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/cloudfoundry/gosteno"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/cloudfoundry/sonde-go"
+  revision = "0c8581caea35ac903728230e447792e2365dcc34"
 
 [prune]
   go-tests = true

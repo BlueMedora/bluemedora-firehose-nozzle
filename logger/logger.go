@@ -18,7 +18,6 @@ const (
 	logLevelEnvVar = "BM_LOG_LEVEL"
 )
 
-//New logger
 func New(logDirectory string, logFile string, loggerName string, logLevel string) *gosteno.Logger {
 	loggingConfig := &gosteno.Config{
 		Sinks:     make([]gosteno.Sink, 1),
@@ -27,7 +26,6 @@ func New(logDirectory string, logFile string, loggerName string, logLevel string
 		EnableLOC: true,
 	}
 
-	//todo check value of env var
 	if envValue := os.Getenv(stdOutLogging); envValue != "" {
 		value, err := strconv.ParseBool(envValue)
 

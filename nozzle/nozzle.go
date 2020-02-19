@@ -140,6 +140,9 @@ func (c *nozzleHTTPClient) Do(req *http.Request) (*http.Response, error) {
 
 	req.Header.Set("Authorization", c.token)
 	resp, err := c.client.Do(req)
+	if err != nil {
+		c.logger.Fatalf("Failure to make http request. %s", err.Error())
+	}
 
 	if !c.config.DisableAccessControl && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
 		time.Sleep(10 * time.Millisecond) // todo figure out why
