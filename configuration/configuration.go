@@ -10,14 +10,16 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 )
 
 const (
-	uaaURLEnv                     = "BM_UAA_URL"
+	uaaURLEnv                     = "UAA_HOST"
 	uaaUsernameEnv                = "BM_UAA_USERNAME"
 	uaaPasswordEnv                = "BM_UAA_PASSWORD"
-	trafficControllerURLEnv       = "BM_TRAFFIC_CONTROLLER_URL"
+	cloudControllerURLEnv         = "CC_HOST"
+	rlpUrlEnv                     = "RLP_URL"
 	subscriptionIDEnv             = "BM_SUBSCRIPTION_ID"
 	disableAccessControlEnv       = "BM_DISABLE_ACCESS_CONTROL"
 	insecureSSLSkipVerifyEnv      = "BM_INSECURE_SSL_SKIP_VERIFY"
@@ -34,7 +36,7 @@ type Configuration struct {
 	UAAURL                     string
 	UAAUsername                string
 	UAAPassword                string
-	TrafficControllerURL       string
+	RLPURL                     string
 	SubscriptionID             string
 	DisableAccessControl       bool
 	InsecureSSLSkipVerify      bool
@@ -56,30 +58,40 @@ func New(configPath string, logger *gosteno.Logger) (*Configuration, error) {
 		return nil, fmt.Errorf("Unable to load config file bluemedora-firehose-nozzle.json: %s", err)
 	}
 
-	var config Configuration
-	err = json.Unmarshal(configBuffer, &config)
+	var c Configuration
+	err = json.Unmarshal(configBuffer, &c)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing config file bluemedora-firehose-nozzle.json: %s", err)
 	}
 
-	overrideWithEnvVar(uaaURLEnv, &config.UAAURL)
-	overrideWithEnvVar(uaaUsernameEnv, &config.UAAUsername)
-	overrideWithEnvVar(uaaPasswordEnv, &config.UAAPassword)
-	overrideWithEnvVar(trafficControllerURLEnv, &config.TrafficControllerURL)
-	overrideWithEnvVar(subscriptionIDEnv, &config.SubscriptionID)
-	overrideWithEnvBool(disableAccessControlEnv, &config.DisableAccessControl)
-	overrideWithEnvBool(insecureSSLSkipVerifyEnv, &config.InsecureSSLSkipVerify)
-	overrideWithEnvUint32(idleTimeoutSecondsEnv, &config.IdleTimeoutSeconds)
-	overrideWithEnvUint32(metricCacheDurationSecondsEnv, &config.MetricCacheDurationSeconds)
-	overrideWithEnvUint32(webServerPortEnv, &config.WebServerPort)
-	overrideWithEnvBool(webServerUseSSLENV, &config.WebServerUseSSL)
-	overrideWithEnvVar(webServerCertLocation, &config.WebServerCertLocation)
-	overrideWithEnvVar(webServerKeyLocation, &config.WebServerKeyLocation)
+	overrideWithEnvVar(uaaURLEnv, &c.UAAURL)
+	overrideWithEnvVar(uaaUsernameEnv, &c.UAAUsername)
+	overrideWithEnvVar(uaaPasswordEnv, &c.UAAPassword)
 
-	logger.Debug(fmt.Sprintf("Loaded configuration to UAAURL <%s>, UAA Username <%s>, Traffic Controller URL <%s>, Disable Access Control <%v>, Insecure SSL Skip Verify <%v>",
-		config.UAAURL, config.UAAUsername, config.TrafficControllerURL, config.DisableAccessControl, config.InsecureSSLSkipVerify))
+	overrideWithEnvVar(subscriptionIDEnv, &c.SubscriptionID)
+	overrideWithEnvBool(disableAccessControlEnv, &c.DisableAccessControl)
+	overrideWithEnvBool(insecureSSLSkipVerifyEnv, &c.InsecureSSLSkipVerify)
+	overrideWithEnvUint32(idleTimeoutSecondsEnv, &c.IdleTimeoutSeconds)
+	overrideWithEnvUint32(metricCacheDurationSecondsEnv, &c.MetricCacheDurationSeconds)
+	overrideWithEnvUint32(webServerPortEnv, &c.WebServerPort)
+	overrideWithEnvBool(webServerUseSSLENV, &c.WebServerUseSSL)
+	overrideWithEnvVar(webServerCertLocation, &c.WebServerCertLocation)
+	overrideWithEnvVar(webServerKeyLocation, &c.WebServerKeyLocation)
 
-	return &config, nil
+	// we use the specified RLP URL over converting the CC URL
+	rlp := os.Getenv(rlpUrlEnv)
+	if rlp != "" {
+		c.RLPURL = rlp
+	} else {
+		overrideWithEnvVar(cloudControllerURLEnv, &c.RLPURL)
+		r := regexp.MustCompile("://(api)")
+		c.RLPURL = r.ReplaceAllString(c.RLPURL, "://log-stream")
+	}
+
+	logger.Debug(fmt.Sprintf("Loaded configuration to UAAURL <%s>, UAA Username <%s>, RLP URL <%s>, Disable Access Control <%v>, Insecure SSL Skip Verify <%v>",
+		c.UAAURL, c.UAAUsername, c.RLPURL, c.DisableAccessControl, c.InsecureSSLSkipVerify))
+
+	return &c, nil
 }
 
 func getAbsolutePath(configPath string, logger *gosteno.Logger) string {

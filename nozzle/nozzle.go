@@ -29,7 +29,7 @@ func New(config *configuration.Configuration, logger *gosteno.Logger) *Nozzle {
 	l := log.New(NewRLPLogger(logger), "", log.LstdFlags)
 
 	c := loggregator.NewRLPGatewayClient(
-		config.TrafficControllerURL,
+		config.RLPURL,
 		loggregator.WithRLPGatewayClientLogger(l),
 		loggregator.WithRLPGatewayHTTPClient(newNozzleHTTPClient(config, logger)),
 	)

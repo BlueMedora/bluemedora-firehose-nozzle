@@ -2,6 +2,7 @@ package results
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,8 +23,10 @@ type Resource struct {
 
 //CreateResource Creates a new resource
 func NewResource(deployment, job, index, ip string) *Resource {
+	// API CHANGED NEED TO PARSE NOW
+	d := strings.SplitN(deployment, "-", 10)[0]
 	return &Resource{
-		deployment:     deployment,
+		deployment:     d,
 		job:            job,
 		index:          index,
 		ip:             ip,

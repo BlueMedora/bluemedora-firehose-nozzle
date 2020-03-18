@@ -27,7 +27,7 @@ const (
 	testUAAURL                = "UAAURL"
 	testUsername              = "username"
 	testPassword              = "password"
-	testTrafficControllerURL  = "traffic_url"
+	testRLPURL                = "traffic_url"
 	testSubscriptionID        = "bluemedora-nozzle"
 	testDisableAccessControl  = false
 	testInsecureSSLSkipVerify = false
@@ -41,7 +41,7 @@ const (
 	testEnvUAAURL                = "env_UAAURL"
 	testEnvUsername              = "env_username"
 	testEnvPassword              = "env_password"
-	testEnvTrafficControllerURL  = "env_traffic_url"
+	testEnvRLPURL                = "env_traffic_url"
 	testEnvsubscriptionID        = "env_bluemedora-nozzle"
 	testEnvDisableAccessControl  = "true"
 	testEnvInsecureSSLSkipVerify = "true"
@@ -52,6 +52,7 @@ const (
 )
 
 func TestConfigParsing(t *testing.T) {
+	t.Log("TestConfigParsing")
 	//Setup Environment
 	err := setupGoodEnvironment(t)
 	if err != nil {
@@ -88,9 +89,9 @@ func TestConfigParsing(t *testing.T) {
 		t.Errorf("Expected UAA Password of %s, but received %s", testPassword, config.UAAPassword)
 	}
 
-	t.Log(fmt.Sprintf("Checking Traffic Controller URL... (expected value: %s)", testTrafficControllerURL))
-	if config.TrafficControllerURL != testTrafficControllerURL {
-		t.Errorf("Expected Traffic Controller URL of %s, but received %s", testTrafficControllerURL, config.TrafficControllerURL)
+	t.Log(fmt.Sprintf("Checking Traffic Controller URL... (expected value: %s)", testRLPURL))
+	if config.RLPURL != testRLPURL {
+		t.Errorf("Expected Traffic Controller URL of %s, but received %s", testRLPURL, config.RLPURL)
 	}
 
 	t.Log(fmt.Sprintf("Checking Subscription ID... (expected value: %s)", testSubscriptionID))
@@ -135,6 +136,7 @@ func TestConfigParsing(t *testing.T) {
 }
 
 func TestBadConfigFile(t *testing.T) {
+	t.Log("TestBadConfigFile")
 	err := setupBadEnvironment(t)
 	if err != nil {
 		tearDownEnvironment(t)
@@ -195,7 +197,7 @@ func TestEnvironmentVariables(t *testing.T) {
 	os.Setenv(uaaURLEnv, testEnvUAAURL)
 	os.Setenv(uaaUsernameEnv, testEnvUsername)
 	os.Setenv(uaaPasswordEnv, testEnvPassword)
-	os.Setenv(trafficControllerURLEnv, testEnvTrafficControllerURL)
+	os.Setenv(rlpUrlEnv, testEnvRLPURL)
 	os.Setenv(subscriptionIDEnv, testEnvsubscriptionID)
 	os.Setenv(disableAccessControlEnv, testEnvDisableAccessControl)
 	os.Setenv(insecureSSLSkipVerifyEnv, testEnvInsecureSSLSkipVerify)
@@ -229,9 +231,9 @@ func TestEnvironmentVariables(t *testing.T) {
 		t.Errorf("Expected UAA Password of %s, but received %s", testEnvPassword, config.UAAPassword)
 	}
 
-	t.Log(fmt.Sprintf("Checking Traffic Controller URL... (expected value: %s)", testEnvTrafficControllerURL))
-	if config.TrafficControllerURL != testEnvTrafficControllerURL {
-		t.Errorf("Expected Traffic Controller URL of %s, but received %s", testEnvTrafficControllerURL, config.TrafficControllerURL)
+	t.Log(fmt.Sprintf("Checking RLP URL... (expected value: %s)", testEnvRLPURL))
+	if config.RLPURL != testEnvRLPURL {
+		t.Errorf("Expected RLP URL of %s, but received %s", testEnvRLPURL, config.RLPURL)
 	}
 
 	t.Log(fmt.Sprintf("Checking Subscription ID... (expected value: %s)", testEnvsubscriptionID))
@@ -332,7 +334,7 @@ func createGoodConfigFile(t *testing.T) error {
 
 	message := Configuration{
 		testUAAURL, testUsername,
-		testPassword, testTrafficControllerURL, testSubscriptionID,
+		testPassword, testRLPURL, testSubscriptionID,
 		testDisableAccessControl, testInsecureSSLSkipVerify,
 		testIdleTimeout, testMetricCacheDuration,
 		testWebServerPort, testWebServerUseSSL,
