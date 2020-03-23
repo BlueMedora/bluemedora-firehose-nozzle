@@ -26,7 +26,7 @@ type Nozzle struct {
 }
 
 func New(config *configuration.Configuration, logger *gosteno.Logger) *Nozzle {
-	l := log.New(NewRLPLogger(logger), "", log.LstdFlags)
+	l := log.New(NewRLPLogger(logger),  /*prefix=*/"", log.LstdFlags)
 
 	c := loggregator.NewRLPGatewayClient(
 		config.RLPURL,
