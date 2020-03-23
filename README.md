@@ -41,7 +41,7 @@ The Blue Medora Nozzle uses a configuration file, located at `config/bluemedora-
     "UAAURL": "https://uaa.pcf.envrioment.com",
     "UAAUsername": "apps_metrics_processing",
     "UAAPassword": "password",
-    "TrafficControllerURL": "wss://doppler.pcf.envrionment.com:443",
+    "RLPURL": "wss://doppler.pcf.envrionment.com:443",
     "SubscriptionID": "bluemedora-nozzle-id",
     "DisableAccessControl": false,
     "InsecureSSLSkipVerify": true,
@@ -57,7 +57,7 @@ The Blue Medora Nozzle uses a configuration file, located at `config/bluemedora-
 | UAAURL | The UAA login URL of the Cloud Foundry deployment. |
 | UAAUsername | The UAA username that has access to read from Loggregator Firehose. |
 | UAAPassword | Password for the `UAAUsername`. |
-| TrafficControllerURL | The URL for the Traffic Controller. To find this follow the instructions in the [documentation](https://docs.cloudfoundry.org/loggregator/architecture.html#firehose). |
+| RLPURL | The URL for the Traffic Controller. To find this follow the instructions in the [documentation](https://docs.cloudfoundry.org/loggregator/architecture.html#firehose). |
 | SubscriptionID | The subscription ID of the nozzle. To find out more about subscription IDs and nozzle scaling see the [documentation](https://docs.cloudfoundry.org/loggregator/log-ops-guide.html#scaling-nozzles).|
 | DisableAccessControl | If `true`, disables authentication with UAA. Used in lattice deployments. |
 | InsecureSSLSkipVerify | If `true`, allows insecure connections to the UAA and Traffic Controller endpoints. |
@@ -75,7 +75,7 @@ The nozzle can also be configured by setting a set of environment variables. The
 | BM_UAA_URL | UAAURL |
 | BM_UAA_USERNAME | UAAUsername |
 | BM_UAA_PASSWORD | UAAPassword |
-| BM_TRAFFIC_CONTROLLER_URL | TrafficControllerURL |
+| BM_TRAFFIC_CONTROLLER_URL | RLPURL |
 | BM_SUBSCRIPTION_ID | SubscriptionID |
 | BM_DISABLE_ACCESS_CONTROL | DisableAccessControl |
 | BM_INSECURE_SSL_SKIP_VERIFY | InsecureSSLSkipVerify |

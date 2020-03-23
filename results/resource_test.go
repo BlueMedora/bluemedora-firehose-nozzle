@@ -1,4 +1,4 @@
-package ttlcache
+package results
 
 import (
 	"encoding/json"
@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/sonde-go/events"
 )
 
 func TestCreateResource(t *testing.T) {
@@ -25,14 +25,14 @@ func TestCreateResource(t *testing.T) {
 				job:            job,
 				index:          index,
 				ip:             ip,
-				valueMetrics:   make(map[string][]*Metric),
-				counterMetrics: make(map[string][]*Metric),
+				ValueMetrics:   make(map[string][]*Metric),
+				CounterMetrics: make(map[string][]*Metric),
 			},
 		},
 	}
 
 	for _, tc := range testCases {
-		createdResource := CreateResource(deployment, job, index, ip)
+		createdResource := NewResource(deployment, job, index, ip)
 
 		if createdResource.deployment != tc.want.deployment || createdResource.job != tc.want.job || createdResource.index != tc.want.index || createdResource.ip != tc.want.ip {
 			t.Errorf("Test Case %s returned %v expected %v", tc.testName, createdResource, tc.want)
@@ -44,50 +44,50 @@ func TestGetMetric(t *testing.T) {
 
 	//Test not passing
 	dummy := "dummy"
-	resource := createTestResource()
+	resource := newTestResource()
 
 	//Create new metric
-	metrics := resource.getMetrics(resource.valueMetrics, dummy)
+	metrics := resource.getMetrics(resource.ValueMetrics, dummy)
 
-	newMetric := resource.getMetrics(resource.valueMetrics, dummy)
+	newMetric := resource.getMetrics(resource.ValueMetrics, dummy)
 	if !reflect.DeepEqual(newMetric, metrics) {
 		t.Errorf("Expecting %v, got %v", metrics, newMetric)
 	}
 }
 
 func TestIsEmpty(t *testing.T) {
-	resource := createTestResource()
+	resource := newTestResource()
 
-	if !resource.isEmpty() {
+	if !resource.IsEmpty() {
 		t.Error("Resource was not empty")
 	}
 
-	resource.valueMetrics["test"] = []*Metric{&Metric{}}
+	resource.ValueMetrics["test"] = []*Metric{&Metric{}}
 
-	if resource.isEmpty() {
+	if resource.IsEmpty() {
 		t.Error("Resource was empty")
 	}
 }
 
 func TestCleanup(t *testing.T) {
 	expiration := time.Now().Add(time.Second)
-	resource := createTestResource()
+	resource := newTestResource()
 
-	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &expiration}}
-	resource.counterMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &expiration}}
+	resource.ValueMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &expiration}}
+	resource.CounterMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &expiration}}
 
-	resource.cleanup()
+	resource.Cleanup()
 
-	if resource.isEmpty() {
+	if resource.IsEmpty() {
 		t.Error("Resource was empty after adding metrics")
 	}
 
 	//Sleep to allow expiration
 	time.Sleep(2 * time.Second)
 
-	resource.cleanup()
+	resource.Cleanup()
 
-	if !resource.isEmpty() {
+	if !resource.IsEmpty() {
 		t.Error("Resource was not empty after metrics expired")
 	}
 }
@@ -95,31 +95,31 @@ func TestCleanup(t *testing.T) {
 func TestRetainedDataAfterCleanup(t *testing.T) {
 	expiration := time.Now().Add(time.Millisecond * 500)
 	longerExpiration := time.Now().Add(time.Minute)
-	resource := createTestResource()
+	resource := newTestResource()
 
-	resource.valueMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &longerExpiration}}
-	resource.counterMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &longerExpiration}}
+	resource.ValueMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &longerExpiration}}
+	resource.CounterMetrics["test"] = []*Metric{&Metric{expires: &expiration}, &Metric{expires: &longerExpiration}}
 
-	resource.cleanup()
+	resource.Cleanup()
 
-	if resource.isEmpty() {
+	if resource.IsEmpty() {
 		t.Error("Resource was empty after adding metrics")
 	}
 
-	if len(resource.valueMetrics["test"]) != 2 || len(resource.counterMetrics["test"]) != 2 {
+	if len(resource.ValueMetrics["test"]) != 2 || len(resource.CounterMetrics["test"]) != 2 {
 		t.Error("Metrics were not created for resource")
 	}
 
 	//Sleep to allow expiration
 	time.Sleep(time.Second)
 
-	resource.cleanup()
+	resource.Cleanup()
 
-	if len(resource.valueMetrics["test"]) != 1 {
+	if len(resource.ValueMetrics["test"]) != 1 {
 		t.Error("Incorrect number of value metrics remain after cleanup")
 	}
 
-	if len(resource.counterMetrics["test"]) != 1 {
+	if len(resource.CounterMetrics["test"]) != 1 {
 		t.Error("Incorrect number of counter metrics remain after cleanup")
 	}
 }
@@ -129,68 +129,81 @@ func TestAddMetric(t *testing.T) {
 	timestamp := time.Now().UnixNano()
 	metricName, counterName := "metric", "counter"
 	value, delta, total := float64(24), uint64(24), uint64(24)
-	valueType, counterType := events.Envelope_ValueMetric, events.Envelope_CounterEvent
 	logger := createLogger()
-	GetInstance().TTL = time.Second
 
-	metricEnvelope := &events.Envelope{
-		Origin:     &origin,
-		Deployment: &deployment,
-		Job:        &job,
-		Index:      &index,
-		Ip:         &ip,
-		Timestamp:  &timestamp,
-		EventType:  &valueType,
-		ValueMetric: &events.ValueMetric{
-			Name:  &metricName,
-			Value: &value,
+	gaugeEnvelope := &loggregator_v2.Envelope{
+		Timestamp:  timestamp,
+		SourceId:   "sourceid",
+		InstanceId: "instanceid",
+		Tags: map[string]string{
+			"deployment": deployment,
+			"job":        job,
+			"index":      index,
+			"ip":         ip,
+			"origin":     origin,
+		},
+		Message: &loggregator_v2.Envelope_Gauge{
+			Gauge: &loggregator_v2.Gauge{
+				Metrics: map[string]*loggregator_v2.GaugeValue{
+					metricName: &loggregator_v2.GaugeValue{
+						Unit:  "ms",
+						Value: value,
+					},
+				},
+			},
 		},
 	}
 
-	counterEnvelope := &events.Envelope{
-		Origin:     &origin,
-		Deployment: &deployment,
-		Job:        &job,
-		Index:      &index,
-		Ip:         &ip,
-		Timestamp:  &timestamp,
-		EventType:  &counterType,
-		CounterEvent: &events.CounterEvent{
-			Name:  &counterName,
-			Delta: &delta,
-			Total: &total,
+	counterEnvelope := &loggregator_v2.Envelope{
+		Timestamp:  timestamp,
+		SourceId:   "sourceid",
+		InstanceId: "instanceid",
+		Tags: map[string]string{
+			"deployment": deployment,
+			"job":        job,
+			"index":      index,
+			"ip":         ip,
+			"origin":     origin,
+		},
+		Message: &loggregator_v2.Envelope_Counter{
+			Counter: &loggregator_v2.Counter{
+				Name:  counterName,
+				Delta: delta,
+				Total: total,
+			},
 		},
 	}
 
-	resource := createTestResource()
+	resource := newTestResource()
+	ttl := 10 * time.Second
 
 	//Test adding value metric
-	resource.AddMetric(metricEnvelope, logger)
+	resource.AddMetric(gaugeEnvelope, logger, ttl)
 
-	if resource.isEmpty() {
+	if resource.IsEmpty() {
 		t.Error("No metrics found in resource")
 	}
 
-	metrics := resource.getMetrics(resource.valueMetrics, metricName)
+	metrics := resource.getMetrics(resource.ValueMetrics, metricName)
 	if metrics == nil || len(metrics) == 0 || metrics[0].data != value {
 		t.Errorf("Metric %s not stored correctly", metricName)
 	}
 
-	delete(resource.valueMetrics, metricName)
+	delete(resource.ValueMetrics, metricName)
 
 	//Test adding counter metric
-	resource.AddMetric(counterEnvelope, logger)
+	resource.AddMetric(counterEnvelope, logger, ttl)
 
-	if resource.isEmpty() {
+	if resource.IsEmpty() {
 		t.Error("No metrics found in resource")
 	}
 
-	metrics = resource.getMetrics(resource.counterMetrics, counterName)
+	metrics = resource.getMetrics(resource.CounterMetrics, counterName)
 	if metrics == nil || len(metrics) == 0 || metrics[0].data != float64(total) {
 		t.Errorf("Metric %s not stored correctly", counterName)
 	}
 
-	delete(resource.valueMetrics, counterName)
+	delete(resource.CounterMetrics, counterName)
 }
 
 func TestConvertMap(t *testing.T) {
@@ -240,11 +253,11 @@ func TestConvertMap(t *testing.T) {
 func TestMarshalJSON(t *testing.T) {
 	want := `{"Deployment":"deployment","Job":"job","Index":"index","IP":"ip","ValueMetrics":{"one":{"metrics":[{"value":1,"timestamp":1257894000000000000}]}},"CounterMetrics":{"one":{"metrics":[{"value":1,"timestamp":1257894000000000000}]}}}`
 
-	resource := createTestResource()
+	resource := newTestResource()
 
-	resource.valueMetrics["one"] = []*Metric{&Metric{data: 1, timestamp: int64(1257894000000000000)}}
+	resource.ValueMetrics["one"] = []*Metric{&Metric{data: 1, timestamp: int64(1257894000000000000)}}
 
-	resource.counterMetrics["one"] = []*Metric{&Metric{data: 1, timestamp: int64(1257894000000000000)}}
+	resource.CounterMetrics["one"] = []*Metric{&Metric{data: 1, timestamp: int64(1257894000000000000)}}
 
 	messageBytes, err := resource.MarshalJSON()
 	if err != nil {
@@ -284,8 +297,7 @@ func createLogger() *gosteno.Logger {
 	return gosteno.NewLogger("logger")
 }
 
-func createTestResource() *Resource {
+func newTestResource() *Resource {
 	deployment, job, index, ip := "deployment", "job", "index", "ip"
-	return CreateResource(deployment, job, index, ip)
-
+	return NewResource(deployment, job, index, ip)
 }

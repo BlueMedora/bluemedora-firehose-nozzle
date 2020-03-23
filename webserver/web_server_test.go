@@ -10,11 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/testhelpers"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
-	"github.com/cloudfoundry/sonde-go/events"
+
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 )
 
 const (
@@ -31,7 +32,7 @@ const (
 
 var (
 	server *WebServer
-	config *nozzleconfiguration.NozzleConfiguration
+	config *configuration.Configuration
 )
 
 func TestTokenEndpoint(t *testing.T) {
@@ -39,7 +40,7 @@ func TestTokenEndpoint(t *testing.T) {
 
 	t.Log("Setting up server environment...")
 	testhelpers.GenerateCertFiles()
-	errors := server.Start(testKeyLocation, testCertLocation)
+	errors := server.Start()
 
 	//Handle errors from server
 	go func() {
@@ -447,7 +448,7 @@ func TestTokenTimeout(t *testing.T) {
 }
 
 /** Tests **/
-func tokenEndPointTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
+func tokenEndPointTest(t *testing.T, client *http.Client, config *configuration.Configuration) {
 	t.Log("Running token request tests...")
 	badCredentialTokenTest(t, client, config)
 	noCredentialTokenTest(t, client, config)
@@ -456,7 +457,7 @@ func tokenEndPointTest(t *testing.T, client *http.Client, config *nozzleconfigur
 	t.Log("Finished token request tests")
 }
 
-func goodTokenRequestTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
+func goodTokenRequestTest(t *testing.T, client *http.Client, config *configuration.Configuration) {
 	tokenRequest := createTokenRequest("GET", config.UAAUsername, config.UAAPassword, config.WebServerPort, t)
 
 	t.Logf("Check if server responses to good token request... (expecting status code: %v)", http.StatusOK)
@@ -470,7 +471,7 @@ func goodTokenRequestTest(t *testing.T, client *http.Client, config *nozzleconfi
 	}
 }
 
-func badCredentialTokenTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
+func badCredentialTokenTest(t *testing.T, client *http.Client, config *configuration.Configuration) {
 	tokenRequest := createTokenRequest("GET", "baduser", "badPass", config.WebServerPort, t)
 
 	t.Logf("Check if server responses to a bad credential token request... (expecting status code: %v)", http.StatusUnauthorized)
@@ -484,7 +485,7 @@ func badCredentialTokenTest(t *testing.T, client *http.Client, config *nozzlecon
 	}
 }
 
-func noCredentialTokenTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
+func noCredentialTokenTest(t *testing.T, client *http.Client, config *configuration.Configuration) {
 	tokenRequest := createTokenRequest("GET", "", "", config.WebServerPort, t)
 
 	t.Logf("Check if server responses to a no credential token request... (expecting status code: %v)", http.StatusBadRequest)
@@ -498,7 +499,7 @@ func noCredentialTokenTest(t *testing.T, client *http.Client, config *nozzleconf
 	}
 }
 
-func putTokenRequestTest(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) {
+func putTokenRequestTest(t *testing.T, client *http.Client, config *configuration.Configuration) {
 	tokenRequest := createTokenRequest("PUT", config.UAAUsername, config.UAAPassword, config.WebServerPort, t)
 
 	t.Logf("Check if server responses to put token request... (expecting status code: %v)", http.StatusMethodNotAllowed)
@@ -572,12 +573,15 @@ func noCachedDataTest(t *testing.T, client *http.Client, token string, port uint
 }
 
 /** Utility Functions **/
-func createWebServer(t *testing.T) (*WebServer, *nozzleconfiguration.NozzleConfiguration) {
+func createWebServer(t *testing.T) (*WebServer, *configuration.Configuration) {
 	t.Log("Creating webserver...")
 	logger.CreateLogDirectory(defaultLogDirectory)
-	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, webserverLogLevel)
+	l := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, webserverLogLevel)
 
-	config, err := nozzleconfiguration.New(defaultConfigLocation, logger)
+	cacheLogger := logger.New(defaultLogDirectory, "wsCache.log", "wsCache", webserverLogLevel)
+	ttlcache.CreateInstance(cacheLogger)
+
+	c, err := configuration.New(defaultConfigLocation, l)
 	if err != nil {
 		t.Fatalf("Error while loading configuration: %s", err.Error())
 	}
@@ -586,7 +590,7 @@ func createWebServer(t *testing.T) (*WebServer, *nozzleconfiguration.NozzleConfi
 	cache.TTL = time.Second
 
 	t.Log("Created webserver")
-	return New(config, logger), config
+	return New(c, l), c
 }
 
 func createHTTPClient(t *testing.T) *http.Client {
@@ -615,7 +619,7 @@ func createTokenRequest(httpmethod string, username string, password string, por
 	return request
 }
 
-func getToken(t *testing.T, client *http.Client, config *nozzleconfiguration.NozzleConfiguration) string {
+func getToken(t *testing.T, client *http.Client, config *configuration.Configuration) string {
 	t.Log("Requesting token...")
 	tokenRequest := createTokenRequest("GET", config.UAAUsername, config.UAAPassword, config.WebServerPort, t)
 	response, err := client.Do(tokenRequest)
@@ -644,29 +648,29 @@ func createResourceRequest(t *testing.T, token string, port uint32, endpoint str
 
 func cacheEnvelope(originType string, server *WebServer) {
 	deployment := "deployment"
-	eventType := events.Envelope_ValueMetric
 	job := "job"
 	index := "0"
 	ip := "127.0.0.1"
 	metricName := "metric"
-	value := float64(100)
-	unit := "unit"
 
-	valueMetric := events.ValueMetric{
-		Name:  &metricName,
-		Value: &value,
-		Unit:  &unit,
+	e := &loggregator_v2.Envelope{
+		SourceId:   "sourceid",
+		InstanceId: "instanceid",
+		Tags: map[string]string{
+			"deployment": deployment,
+			"job":        job,
+			"index":      index,
+			"ip":         ip,
+			"origin":     originType,
+		},
+		Message: &loggregator_v2.Envelope_Counter{
+			Counter: &loggregator_v2.Counter{
+				Name:  metricName,
+				Delta: 10,
+				Total: 10000,
+			},
+		},
 	}
-
-	envelope := events.Envelope{
-		Origin:      &originType,
-		EventType:   &eventType,
-		Deployment:  &deployment,
-		Job:         &job,
-		Index:       &index,
-		Ip:          &ip,
-		ValueMetric: &valueMetric,
-	}
-
-	server.CacheEnvelope(&envelope)
+	cache := ttlcache.GetInstance()
+	cache.UpdateResource(e)
 }

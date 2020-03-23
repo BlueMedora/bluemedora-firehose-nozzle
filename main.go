@@ -6,9 +6,10 @@ package main
 import (
 	"flag"
 
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/bluemedorafirehosenozzle"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/configuration"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/logger"
-	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzleconfiguration"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/nozzle"
+	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/ttlcache"
 	"github.com/BlueMedoraPublic/bluemedora-firehose-nozzle/webserver"
 )
 
@@ -22,68 +23,42 @@ const (
 
 	webserverLogFile = "bm_server.log"
 	webserverLogName = "bm_server"
+
+	cacheLogFile = "bm_cache.log"
+	cacheLogName = "bm_cache"
 )
 
 var (
-	//Mode to run nozzle in. Webserver mode is for debugging purposes only
-	runMode  = flag.String("mode", "normal", "Mode to run nozzle `normal` or `webserver`")
 	logLevel = flag.String("log-level", nozzleLogLevel, "Set log level to control verbosity - defaults to info")
 )
 
 func main() {
 	flag.Parse()
-
-	if *runMode == "normal" {
-		normalSetup()
-	} else if *runMode == "webserver" {
-		standUpWebServer()
-	}
-}
-
-func normalSetup() {
 	logger.CreateLogDirectory(defaultLogDirectory)
+	l := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, *logLevel)
 
-	logger := logger.New(defaultLogDirectory, nozzleLogFile, nozzleLogName, *logLevel)
-	logger.Debug("working log")
+	cacheLogger := logger.New(defaultLogDirectory, cacheLogFile, cacheLogName, *logLevel)
+	ttlcache.CreateInstance(cacheLogger)
 
-	//Read in config
-	config, err := nozzleconfiguration.New(defaultConfigLocation, logger)
+	c, err := configuration.New(defaultConfigLocation, l)
 	if err != nil {
-		logger.Fatalf("Error parsing config file: %s", err.Error())
+		l.Fatalf("Error parsing config file: %s", err.Error())
 	}
 
-	//Setup and start nozzle
-	server := createWebServer(config)
+	wsl := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
+	ws := webserver.New(c, wsl)
+	wsErrs := ws.Start()
 
-	nozzle := bluemedorafirehosenozzle.New(config, server, logger)
-	err = nozzle.Start()
+	n := *nozzle.New(c, l)
+	n.Start()
 
-	if err != nil {
-		logger.Fatalf("Error while running nozzle: %s", err.Error())
+	cache := ttlcache.GetInstance()
+	for {
+		select {
+		case m := <-n.Messages:
+			cache.UpdateResource(m)
+		case err := <-wsErrs:
+			l.Fatalf("Error while running webserver: %s", err.Error())
+		}
 	}
-}
-
-func standUpWebServer() {
-	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
-
-	//Read in config
-	config, err := nozzleconfiguration.New(defaultConfigLocation, logger)
-	if err != nil {
-		logger.Fatalf("Error parsing config file: %s", err.Error())
-	}
-
-	server := webserver.New(config, logger)
-
-	logger.Info("Starting webserver")
-	errors := server.Start(webserver.DefaultKeyLocation, webserver.DefaultCertLocation)
-
-	select {
-	case err := <-errors:
-		logger.Fatalf("Error while running server: %s", err.Error())
-	}
-}
-
-func createWebServer(config *nozzleconfiguration.NozzleConfiguration) *webserver.WebServer {
-	logger := logger.New(defaultLogDirectory, webserverLogFile, webserverLogName, *logLevel)
-	return webserver.New(config, logger)
 }

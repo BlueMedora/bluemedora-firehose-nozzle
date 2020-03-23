@@ -9,7 +9,7 @@ matrix:
   allow_failures:
   - go: tip
 before_install:
-- go get -v github.com/golang/lint/golint
+- go get -v golang.org/x/lint/golint
 - go get -v golang.org/x/tools/cmd/cover
 
 install:

@@ -1,4 +1,4 @@
-package ttlcache
+package results
 
 import (
 	"sync"
@@ -13,28 +13,34 @@ type Metric struct {
 	expires   *time.Time
 }
 
-func (m *Metric) getData() float64 {
+func (m *Metric) GetData() float64 {
 	m.RLock()
 	defer m.RUnlock()
 	return m.data
 }
 
-func (m *Metric) getTimestamp() int64 {
+func (m *Metric) GetTimestamp() int64 {
 	m.RLock()
 	defer m.RUnlock()
 	return m.timestamp
 }
 
-func (m *Metric) update(newData float64, newTimestamp int64, duration time.Duration) {
-	m.Lock()
-	defer m.Unlock()
-	expiration := time.Now().Add(duration)
-	m.expires = &expiration
-	m.data = newData
-	m.timestamp = newTimestamp
+func NewMetric(d float64, t int64, ttl time.Duration) *Metric {
+	metric := &Metric{}
+	metric.Update(d, t, ttl)
+	return metric
 }
 
-func (m *Metric) expired() bool {
+func (m *Metric) Update(d float64, t int64, ttl time.Duration) {
+	m.Lock()
+	defer m.Unlock()
+	expiration := time.Now().Add(ttl)
+	m.expires = &expiration
+	m.data = d
+	m.timestamp = t
+}
+
+func (m *Metric) HasExpired() bool {
 	m.RLock()
 	defer m.RUnlock()
 	if m.expires == nil {
