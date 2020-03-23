@@ -79,7 +79,7 @@ func (c *TTLCache) GetResource(originKey, key string) (resource *results.Resourc
 	return c.getResource(originKey, key)
 }
 
-// private utility func, public methods using it are expected to have mutext RLock minimum
+// private utility func, public methods using it are expected to have mutex RLock minimum
 func (c *TTLCache) getResource(originKey, key string) (resource *results.Resource, found bool) {
 	if origin, exists := c.origins[originKey]; exists {
 		resource, found = origin[key]
