@@ -73,7 +73,6 @@ func (r *Resource) IsEmpty() bool {
 	for _, metrics := range r.ValueMetrics {
 		count += len(metrics)
 	}
-	// count := len(r.valueMetrics)
 	for _, metrics := range r.CounterMetrics {
 		count += len(metrics)
 	}
